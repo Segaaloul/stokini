@@ -1,0 +1,78 @@
+{% extends 'base.html.twig' %} 
+
+
+
+ {%  block content %}
+
+
+
+ <div class="container-xxl flex-grow-1 container-p-y">
+<h5>Dossier : {{ dossier.nom }}</h5>
+<button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#uploadModal">
+  Ajouter fichier(s)
+</button>
+<div class="row row-cols-2 row-cols-md-4 g-3 mb-5" id="fichier-grid">
+
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="uploadModalLabel">Uploader fichiers dans "{{ dossier.nom }}"</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+        <div class="mb-3">
+          <label for="formFile" class="form-label">Fichier</label>
+        {{ form_widget(form.fichier, {'attr': {'class': 'form-control', 'multiple': 'multiple'}}) }}
+            {{ form_errors(form.fichier) }}
+        </div>
+        {{ form_widget(form.dossier, {'attr': {'type': 'hidden', 'style': 'display:none;'}}) }}
+
+          <input type="hidden" name="dossier_id" value="{{ dossier.id }}">
+          <button type="submit" class="btn btn-primary mt-3">Envoyer</button>
+        {{ form_end(form) }}
+      </div>
+    </div>
+  </div>
+</div>
+
+ {% for fichier in fichiers %}
+    {% set ext = fichier.chemin|split('.')|last|lower %}
+    {% set isImage = ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+    {% set dateUpload = fichier.uploadedAt ? fichier.uploadedAt|date('Y-m-d') : '' %}
+
+    <div class="col fichier-card" data-date="{{ dateUpload }}">
+      <div class="card h-100 shadow-sm p-2">
+        {% if isImage %}
+          <img class="card-img-top img-fluid" src="{{ asset('uploads/' ~ fichier.chemin) }}" alt="{{ fichier.nom }}" style="max-height: 150px; object-fit: cover;">
+        {% else %}
+          {# Ici on met une icône générique pour les fichiers non images #}
+          <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/fichiertxt.png') }}" alt="Fichier" style="max-height: 150px; object-fit: contain;">
+        {% endif %}
+        <div class="card-body p-2">
+          <h6 class="card-title small text-truncate" title="{{ fichier.nom }}">{{ fichier.nom }}</h6>
+          <p class="card-text small text-muted mb-1">📅 {{ dateUpload ? dateUpload|date('d/m/Y') : 'Inconnu' }}</p>
+        </div>
+        <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
+          <a class="btn btn-sm btn-outline-primary" href="{{ asset('uploads/' ~ fichier.chemin) }}" target="_blank">Voir</a>
+            <a class="btn btn-sm btn-outline-success" href="{{ asset('uploads/' ~ fichier.chemin) }}" download="{{ fichier.nom }}">Télécharger</a>
+
+          <form method="post" action="{{ path('app_fichier_supprimer', { id: fichier.id }) }}" onsubmit="return confirm('Supprimer ce fichier ?');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
+          </form>
+        </div>
+      </div>
+    </div>
+{% else %}
+    <div class="col">
+      <div class="alert alert-warning w-100">Aucun fichier trouvé.</div>
+    </div>
+{% endfor %}
+
+</div>
+
+<a href="{{ path('app_fichiers') }}" class="btn btn-secondary">Retour à la liste générale</a>
+</div>
+
+{% endblock %}
