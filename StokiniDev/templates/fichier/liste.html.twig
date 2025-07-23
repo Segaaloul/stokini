@@ -7,14 +7,27 @@
 
  <div class="container-xxl flex-grow-1 container-p-y">
 
-<div class="mb-3">
-  <label for="date-filter" class="form-label">Filtrer par date :</label>
-  <input type="date" id="date-filter" class="form-control w-auto d-inline-block">
-<!-- Bouton pour ouvrir la modale -->
-<button type="button" class="btn  btn-success" data-bs-toggle="modal" data-bs-target="#addFolderModal">
-    + Ajouter un dossier
-</button>
-  <button class="btn btn-info" onclick="document.getElementById('date-filter').value=''; document.getElementById('date-filter').dispatchEvent(new Event('change'));">Réinitialiser</button>
+<div class="mb-3 d-flex flex-column flex-md-row align-items-start gap-2">
+  <div class="d-flex flex-column">
+    <label for="date-filter" class="form-label">Filtrer par date :</label>
+    <input type="date" id="date-filter" class="form-control w-100 w-md-auto">
+  </div>
+
+  <!-- Boutons -->
+  <div class="d-flex gap-2 mt-2 mt-md-4">
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addFolderModal">
+      + Ajouter un dossier
+    </button>
+
+    <button class="btn btn-info"
+      onclick="document.getElementById('date-filter').value=''; document.getElementById('date-filter').dispatchEvent(new Event('change'));">
+      Réinitialiser
+    </button>
+  </div>
+</div>
+
+
+
 
 <!-- La fenêtre modale Bootstrap -->
 <div class="modal fade" id="addFolderModal" tabindex="-1" aria-labelledby="addFolderModalLabel" aria-hidden="true">
@@ -40,9 +53,8 @@
   </div>
 </div>
 
-</div>
 
-<div class="row row-cols-2 row-cols-md-4 g-3 mb-5" id="fichier-grid">
+<div class="row row-cols-1 row-cols-md-4 g-3 mb-5" id="fichier-grid">
   {% for fichier in fichiersSansDossier %}
     {% set ext = fichier.chemin|split('.')|last|lower %}
     {% set isImage = ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
@@ -72,29 +84,77 @@
       <div class="alert alert-warning w-100">Aucun fichier trouvé.</div>
     </div> #}
   {% endfor %}
+
+
+
   {% for dossier in dossiers %}
       {% set dateUploadd = dossier.createAt ? dossier.createAt|date('Y-m-d') : '' %}
 
   <div class="col fichier-card" data-date="{{ dateUploadd }}" >
     <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}" class="text-decoration-none text-dark">
       <div class="card h-100 shadow-sm p-2">
+
+      {% if dossier.users|length > 1 %}
+    {% set autres_users = dossier.users|filter(u => u.id != app.user.id) %}
+    {% set noms_users = autres_users|map(u => u.email)|join(', ') %}
+
+    <span class="badge bg-primary position-absolute top-0 end-0 m-2" title="Partagé avec : {{ noms_users }}">
+        P
+    </span>
+{% endif %}
+
         <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/foldergreen_93329.png') }}" alt="Dossier" style="max-height: 200px; object-fit: contain;">
         <div class="card-body p-2">
           <h6 class="card-title small text-truncate" title="{{ dossier.nom }}">{{ dossier.nom }}</h6>
                     <p class="card-text small text-muted mb-1">📅 {{ dateUploadd ? dateUploadd|date('d/m/Y') : 'Inconnu' }}</p>
 
         </div>
+        </a>
         <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
           <span class="btn btn-sm btn-outline-primary disabled">Ouvrir</span>
+            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#partagerModal{{ dossier.id }}">Partager</button>
+
         </div>
       </div>
-    </a>
+    
+    
   </div>
+  <!-- Modal de partage -->
+<div class="modal fade" id="partagerModal{{ dossier.id }}" tabindex="-1" aria-labelledby="partagerModalLabel{{ dossier.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="{{ path('app_dossier_partager') }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="partagerModalLabel{{ dossier.id }}">Partager le dossier : {{ dossier.nom }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="dossier_id" value="{{ dossier.id }}">
+          <div class="mb-3">
+            <label for="userSelect{{ dossier.id }}" class="form-label">Sélectionner un utilisateur :</label>
+            <select name="user_id" id="userSelect{{ dossier.id }}" class="form-select" required>
+              {% for utilisateur in all_users %}
+                {% if utilisateur != app.user %}
+                  <option value="{{ utilisateur.id }}">{{ utilisateur.email }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Partager</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endfor %}
 
 
 </div>
 </div>
+
 
 
 <script>
@@ -112,6 +172,10 @@
     });
   });
 </script>
+
+
+<!-- Bootstrap JS Bundle (inclut Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 {% endblock %}
 

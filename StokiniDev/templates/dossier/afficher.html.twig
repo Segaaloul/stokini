@@ -7,12 +7,31 @@
 
 
  <div class="container-xxl flex-grow-1 container-p-y">
-<h5>Dossier : {{ dossier.nom }}</h5>
-<button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#uploadModal">
+
+ <div class="mb-3 d-flex flex-column flex-md-row align-items-start gap-2">
+  <div class="d-flex flex-column">
+    <label for="date-filter" class="form-label">Filtrer par date :</label>
+    <input type="date" id="date-filter" class="form-control w-100 w-md-auto">
+  </div>
+
+  <!-- Boutons -->
+  <div class="d-flex gap-2 mt-2 mt-md-4">
+    <button type="button" class="btn btn-success " data-bs-toggle="modal" data-bs-target="#uploadModal">
   Ajouter fichier(s)
 </button>
-<div class="row row-cols-2 row-cols-md-4 g-3 mb-5" id="fichier-grid">
 
+   
+  </div>
+</div>
+
+<h5>Dossier : {{ dossier.nom }}</h5>
+
+
+
+<div class="row row-cols-1 row-cols-md-4 g-3 mb-5" id="fichier-grid">
+
+
+<!-- La fenêtre modale Bootstrap  pour ajouter fichier-->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -58,21 +77,52 @@
           <a class="btn btn-sm btn-outline-primary" href="{{ asset('uploads/' ~ fichier.chemin) }}" target="_blank">Voir</a>
             <a class="btn btn-sm btn-outline-success" href="{{ asset('uploads/' ~ fichier.chemin) }}" download="{{ fichier.nom }}">Télécharger</a>
 
-          <form method="post" action="{{ path('app_fichier_supprimer', { id: fichier.id }) }}" onsubmit="return confirm('Supprimer ce fichier ?');">
-            <button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
-          </form>
+          <!-- Bouton déclencheur -->
+        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal{{ fichier.id }}">
+          🗑
+        </button>
         </div>
       </div>
     </div>
+    <!-- Modale de confirmation de suppresion -->
+<div class="modal fade" id="confirmDeleteModal{{ fichier.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ fichier.id }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteModalLabel{{ fichier.id }}">Confirmer la suppression</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      
+      <div class="modal-body">
+        Êtes-vous sûr de vouloir supprimer le fichier <strong>{{ fichier.nom }}</strong> ?
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        
+        <form method="post" action="{{ path('app_fichier_supprimer', { id: fichier.id }) }}">
+          <button type="submit" class="btn btn-danger">Supprimer</button>
+        </form>
+      </div>
+      
+    </div>
+  </div>
+</div>
 {% else %}
     <div class="col">
       <div class="alert alert-warning w-100">Aucun fichier trouvé.</div>
     </div>
+    
 {% endfor %}
 
 </div>
 
 <a href="{{ path('app_fichiers') }}" class="btn btn-secondary">Retour à la liste générale</a>
 </div>
+
+
+
+
 
 {% endblock %}

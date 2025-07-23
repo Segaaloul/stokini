@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Entity;
+
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use App\Repository\UserRepository;
@@ -23,18 +24,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private array $roles = [];
 
-    #[ORM\OneToMany(mappedBy: 'user', targetEntity: Dossier::class, orphanRemoval: true)]
-    private Collection $dossiers;
+    #[ORM\ManyToMany(targetEntity: Dossier::class, mappedBy: 'users')]
+    private Collection $dossiersPartages;
 
     public function __construct()
     {
-        $this->dossiers = new ArrayCollection();
+        $this->dossiersPartages = new ArrayCollection();
     }
 
-    public function getDossiers(): Collection
+    public function getDossiersPartages(): Collection
     {
-        return $this->dossiers;
+        return $this->dossiersPartages;
     }
+
+    public function addDossierPartage(Dossier $dossier): self
+    {
+        if (!$this->dossiersPartages->contains($dossier)) {
+            $this->dossiersPartages->add($dossier);
+            $dossier->addUser($this); // synchroniser les deux côtés
+        }
+        return $this;
+    }
+
+    public function removeDossierPartage(Dossier $dossier): self
+    {
+        if ($this->dossiersPartages->removeElement($dossier)) {
+            $dossier->removeUser($this);
+        }
+        return $this;
+    }
+
+
+
     /**
      * @var string The hashed password
      */
@@ -59,7 +80,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
 
-    #[ORM\Column(type:"string", length:255)]
+    #[ORM\Column(type: "string", length: 255)]
     private $nom;
 
     public function getNom(): ?string

@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Entity;
+
 use App\Entity\User;
 use App\Repository\DossierRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+
 #[ORM\Entity(repositoryClass: DossierRepository::class)]
 class Dossier
 {
@@ -20,18 +22,27 @@ class Dossier
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $createAt = null;
 
-    #[ORM\ManyToOne(inversedBy: 'dossiers')]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?User $user = null;
+    #[ORM\ManyToMany(targetEntity: User::class, inversedBy: 'dossiersPartages')]
+    #[ORM\JoinTable(name: 'dossier_user')]
+    private Collection $users;
 
-    public function getUser(): ?User
+
+
+    public function getUsers(): Collection
     {
-        return $this->user;
+        return $this->users;
     }
 
-    public function setUser(?User $user): self
+    public function addUser(User $user): self
     {
-        $this->user = $user;
+        if (!$this->users->contains($user)) {
+            $this->users->add($user);
+        }
+        return $this;
+    }
+    public function removeUser(User $user): self
+    {
+        $this->users->removeElement($user);
         return $this;
     }
 
@@ -41,14 +52,15 @@ class Dossier
 
     public function __construct()
     {
+        $this->users = new ArrayCollection();
         $this->fichiers = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getFichiers(): Collection
-{
-    return $this->fichiers;
-}
+    {
+        return $this->fichiers;
+    }
 
 
     public function getId(): ?int
@@ -79,6 +91,4 @@ class Dossier
 
         return $this;
     }
-
-
 }
