@@ -3,18 +3,71 @@
 {% block title %}Inscription{% endblock %}
 
 {% block body %}
-<h1>Inscription</h1>
+<link rel="stylesheet" href="{{ asset('/assets/vendor/css/pages/page-auth.css') }}" />
 
-{{ form_start(registrationForm) }}
+<div class="container-xxl">
+  <div class="authentication-wrapper authentication-basic container-p-y">
+    <div class="authentication-inner">
+      <div class="card">
+        <div class="card-body">
+          <!-- Logo -->
+          <div class="app-brand justify-content-center mb-4">
+            <a href="/" class="app-brand-link gap-2">
+              <img src="{{ asset('assets/img/favicon/StokiniLogo.png') }}" width="40px" alt="Stokini Logo" />
+              <span class="app-brand-text fw-bolder">Stokini</span>
+            </a>
+          </div>
 
-    {{ form_row(registrationForm.nom) }}
+          <h4 class="mb-2 text-center">Créer un compte</h4>
+          <p class="mb-4 text-center">Rejoignez Stokini dès maintenant !</p>
 
-    {{ form_row(registrationForm.email) }}
+          {{ form_start(registrationForm) }}
 
-    {{ form_row(registrationForm.plainPassword.first) }}
-    {{ form_row(registrationForm.plainPassword.second) }}
+          {# Champ Nom #}
+          <div class="mb-3">
+            {{ form_label(registrationForm.nom) }}
+            {{ form_widget(registrationForm.nom, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(registrationForm.nom) }}
+          </div>
 
-    <button class="btn">S’inscrire</button>
+          {# Champ Email #}
+          <div class="mb-3">
+            {{ form_label(registrationForm.email) }}
+            {{ form_widget(registrationForm.email, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(registrationForm.email) }}
+          </div>
 
-{{ form_end(registrationForm) }}
+          {# Mot de passe #}
+          <div class="mb-3 form-password-toggle">
+            {{ form_label(registrationForm.plainPassword.first) }}
+            {{ form_widget(registrationForm.plainPassword.first, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(registrationForm.plainPassword.first) }}
+          </div>
+
+          {# Confirmation mot de passe #}
+          <div class="mb-3 form-password-toggle">
+            {{ form_label(registrationForm.plainPassword.second) }}
+            {{ form_widget(registrationForm.plainPassword.second, {'attr': {'class': 'form-control'}}) }}
+            {{ form_errors(registrationForm.plainPassword.second) }}
+          </div>
+
+          <button type="submit" class="btn btn-primary d-grid w-100" style="background-color:#4ae016;">
+            S’inscrire
+          </button>
+
+          {{ form_end(registrationForm) }}
+
+          <p class="text-center mt-3">
+            <span>Déjà un compte ?</span>
+            <a href="{{ path('app_login') }}">Connectez-vous</a>
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Ajoute ici tes scripts JS Bootstrap si besoin #}
+
 {% endblock %}

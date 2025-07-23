@@ -16,7 +16,7 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 use App\Repository\UserRepository;
 use App\Repository\DossierRepository;
 use Symfony\Component\Security\Core\Security;
-
+use Symfony\Component\Filesystem\Filesystem;
 
 class DossierController extends AbstractController
 {
@@ -48,7 +48,7 @@ class DossierController extends AbstractController
         $nom = $request->request->get('nom');
         $dossier->setNom($nom);
         $dossier->setCreateAt(new \DateTimeImmutable());
-
+        $dossier->setCreatedBy($user->getNom());
         $em->persist($dossier);
         $em->flush();
 
@@ -166,5 +166,43 @@ class DossierController extends AbstractController
             'fichiers' => $dossier->getFichiers(),
             'form' => $form->createView(),
         ]);
+    }
+
+
+
+
+
+
+    #[Route('/dossier/supprimer/{id}', name: 'app_dossier_supprimer')]
+    public function supprimer(int $id, EntityManagerInterface $em): Response
+    {
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+
+        if (!$dossier) {
+            throw $this->createNotFoundException('Dossier non rencontré');
+        }
+
+        foreach ($dossier->getFichiers() as $fichier) {
+           
+
+            if (!$fichier) {
+                throw $this->createNotFoundException('Fichier non trouvé');
+            }
+
+            $filesystem = new Filesystem();
+            $cheminFichier = $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
+
+            if ($filesystem->exists($cheminFichier)) {
+                $filesystem->remove($cheminFichier);
+            }
+
+            $em->remove($fichier);
+            $em->flush();
+        }
+
+        $em->remove($dossier);
+        $em->flush();
+
+        return $this->redirectToRoute('app_fichiers');
     }
 }

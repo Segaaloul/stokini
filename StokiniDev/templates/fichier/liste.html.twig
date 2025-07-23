@@ -87,6 +87,8 @@
 
 
 
+  <!-- --------partie dossier-------- -->
+
   {% for dossier in dossiers %}
       {% set dateUploadd = dossier.createAt ? dossier.createAt|date('Y-m-d') : '' %}
 
@@ -95,30 +97,39 @@
       <div class="card h-100 shadow-sm p-2">
 
       {% if dossier.users|length > 1 %}
-    {% set autres_users = dossier.users|filter(u => u.id != app.user.id) %}
-    {% set noms_users = autres_users|map(u => u.email)|join(', ') %}
+         {% set autres_users = dossier.users|filter(u => u.id != app.user.id) %}
+         {% set noms_users = autres_users|map(u => u.email)|join(', ') %}
 
-    <span class="badge bg-primary position-absolute top-0 end-0 m-2" title="Partagé avec : {{ noms_users }}">
-        P
-    </span>
-{% endif %}
+            <span class="badge bg-primary position-absolute top-0 end-0 m-2" title="Partagé avec : {{ noms_users }}"> P </span>
+      {% endif %}
 
         <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/foldergreen_93329.png') }}" alt="Dossier" style="max-height: 200px; object-fit: contain;">
         <div class="card-body p-2">
-          <h6 class="card-title small text-truncate" title="{{ dossier.nom }}">{{ dossier.nom }}</h6>
-                    <p class="card-text small text-muted mb-1">📅 {{ dateUploadd ? dateUploadd|date('d/m/Y') : 'Inconnu' }}</p>
+            <h6 class="card-title small text-truncate" title="{{ dossier.nom }}">{{ dossier.nom }}</h6>
+            <p class="card-text small text-muted mb-1">📅 {{ dateUploadd ? dateUploadd|date('d/m/Y') : 'Inconnu' }}</p>
 
         </div>
-        </a>
+    </a>
         <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
-          <span class="btn btn-sm btn-outline-primary disabled">Ouvrir</span>
+        <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}">
+          <span class="btn btn-sm btn-outline-primary ">Ouvrir</span>
+        </a>
+          {% if dossier.createdBy == app.user.nom %}
             <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#partagerModal{{ dossier.id }}">Partager</button>
+            <form method="post" action="{{ path('app_dossier_supprimer', { id: dossier.id }) }}" onsubmit="return confirm('Supprimer ce dossier ?');">
+              <button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
+{% endif %}
 
         </div>
       </div>
     
     
   </div>
+
+
+
+
+
   <!-- Modal de partage -->
 <div class="modal fade" id="partagerModal{{ dossier.id }}" tabindex="-1" aria-labelledby="partagerModalLabel{{ dossier.id }}" aria-hidden="true">
   <div class="modal-dialog">
@@ -175,7 +186,7 @@
 
 
 <!-- Bootstrap JS Bundle (inclut Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 
 {% endblock %}
 
@@ -191,74 +202,3 @@
 
 
 
-
-
-{# 
-
-<table border="1" cellpadding="10" id="fichiers-table">
-    <thead>
-        <tr>
-            <th>Nom</th>
-            <th>Fichier</th>
-            <th style="cursor:pointer;" onclick="sortTable()">Date d’upload &#x25B2;&#x25BC;</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for fichier in fichiers %}
-            <tr>
-                <td>{{ fichier.nom }}</td>
-                <td>
-                    {% set ext = fichier.chemin|split('.')|last|lower %}
-                    {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
-                        <img src="{{ asset('uploads/' ~ fichier.chemin) }}" alt="{{ fichier.nom }}" width="100">
-                    {% else %}
-                        <a href="{{ asset('uploads/' ~ fichier.chemin) }}" target="_blank">
-                            Voir / Télécharger
-                        </a>
-                    {% endif %}
-                </td>
-                <td data-date="{{ fichier.uploadedAt ? fichier.uploadedAt|date('Y-m-d H:i:s') : '' }}">
-                    {{ fichier.uploadedAt ? fichier.uploadedAt|date('d/m/Y H:i') : 'Non défini' }}
-                </td>
-                <td>
-                    <form method="post" action="{{ path('app_fichier_supprimer', { id: fichier.id }) }}" onsubmit="return confirm('Supprimer ce fichier ?');">
-                        <button type="submit">🗑 Supprimer</button>
-                    </form>
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="4">Aucun fichier trouvé.</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
-<script>
-let asc = true;
-
-function sortTable() {
-    const table = document.getElementById("fichiers-table");
-    const tbody = table.tBodies[0];
-    const rows = Array.from(tbody.rows);
-
-    rows.sort((a, b) => {
-        const dateA = a.cells[2].getAttribute('data-date');
-        const dateB = b.cells[2].getAttribute('data-date');
-
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-
-        if (asc) {
-            return new Date(dateA) - new Date(dateB);
-        } else {
-            return new Date(dateB) - new Date(dateA);
-        }
-    });
-
-    // Réattache les lignes triées
-    rows.forEach(row => tbody.appendChild(row));
-
-    asc = !asc; // Inverse le sens pour le prochain clic
-}
-</script> #}

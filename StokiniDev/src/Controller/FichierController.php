@@ -27,11 +27,7 @@ class FichierController extends AbstractController
         ]);
     }
 
-    #[Route('/', name: 'app_home')]
-    public function home(): Response
-    {
-        return $this->render('fichier/index.html.twig');
-    }
+
 
 
     #[Route('/upload', name: 'app_upload')]

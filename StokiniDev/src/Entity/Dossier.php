@@ -19,6 +19,9 @@ class Dossier
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $nom = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $createdBy = null;
+
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $createAt = null;
 
@@ -27,6 +30,16 @@ class Dossier
     private Collection $users;
 
 
+    public function getCreatedBy(): ?string
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?string $createdBy): self
+    {
+        $this->createdBy = $createdBy;
+        return $this;
+    }
 
     public function getUsers(): Collection
     {
