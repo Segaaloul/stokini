@@ -42,7 +42,10 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
       </div>
       <div class="modal-body">
+      
         {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+
+
         <div class="mb-3">
           <label for="formFile" class="form-label">Fichier</label>
         {{ form_widget(form.fichier, {'attr': {'class': 'form-control', 'multiple': 'multiple'}}) }}

@@ -115,9 +115,12 @@
           <span class="btn btn-sm btn-outline-primary ">Ouvrir</span>
         </a>
           {% if dossier.createdBy == app.user.nom %}
+
             <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#partagerModal{{ dossier.id }}">Partager</button>
+
             <form method="post" action="{{ path('app_dossier_supprimer', { id: dossier.id }) }}" onsubmit="return confirm('Supprimer ce dossier ?');">
               <button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
+            </form>
 {% endif %}
 
         </div>

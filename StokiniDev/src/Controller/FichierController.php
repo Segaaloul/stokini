@@ -40,6 +40,7 @@ class FichierController extends AbstractController
             $files = $form->get('fichier')->getData(); // ✅ bien récupérer le tableau
             $dossier = $form->get('dossier')->getData();
 
+
             if ($files) {
 
                 foreach ($files as $file) {
@@ -48,7 +49,7 @@ class FichierController extends AbstractController
                     $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
 
                     $file->move(
-                        $this->getParameter('uploads_directory'),
+                        $this->getParameter('uploads_directory') . '/' . $dossier->getCreateBy() . '/' . $dossier->getNom(),
                         $newFilename
                     );
 

@@ -51,6 +51,11 @@ class DossierController extends AbstractController
         $dossier->setCreatedBy($user->getNom());
         $em->persist($dossier);
         $em->flush();
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
+
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0775, true); // crée le dossier récursivement
+        }
 
         return $this->redirectToRoute('app_fichiers');
     }
@@ -145,10 +150,10 @@ class DossierController extends AbstractController
                     $safeFilename = $slugger->slug($originalFilename);
                     $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
 
-                    $file->move($this->getParameter('uploads_directory'), $newFilename);
+                    $file->move($this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom(),  $newFilename);
 
                     $fichier = new Fichier();
-                    $fichier->setChemin($newFilename);
+                    $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $newFilename);
                     $fichier->setNom($originalFilename);
                     $fichier->setUploadedAt(new \DateTimeImmutable());
                     $fichier->setDossier($dossier);
@@ -183,7 +188,7 @@ class DossierController extends AbstractController
         }
 
         foreach ($dossier->getFichiers() as $fichier) {
-           
+
 
             if (!$fichier) {
                 throw $this->createNotFoundException('Fichier non trouvé');
