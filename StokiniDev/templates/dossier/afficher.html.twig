@@ -69,7 +69,7 @@
     <div class="col fichier-card" data-date="{{ dateUpload }}">
       <div class="card h-100 shadow-sm p-2">
         {% if isImage %}
-          <img class="card-img-top img-fluid" src="{{ asset('uploads/' ~ fichier.chemin) }}" alt="{{ fichier.nom }}" style="max-height: 150px; object-fit: cover;">
+          <img class="card-img-top img-fluid" src="{{ path('app_serve_fichier', {'path': fichier.chemin}) }}" alt="{{ fichier.nom }}" style="max-height: 150px; object-fit: cover;">
         {% else %}
           {# Ici on met une icône générique pour les fichiers non images #}
           <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/fichiertxt.png') }}" alt="Fichier" style="max-height: 150px; object-fit: contain;">
@@ -126,8 +126,7 @@
 <a href="{{ path('app_fichiers') }}" class="btn btn-secondary">Retour à la liste générale</a>
 </div>
 
-
-
+<script src="{{ asset('assets/vendor/libs/popper/popper.js') }}"></script>
 
 
 {% endblock %}

@@ -17,10 +17,13 @@ use App\Repository\UserRepository;
 use App\Repository\DossierRepository;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Filesystem\Filesystem;
-
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+#[Route('/dossier')] // 👈 prefix ici
 class DossierController extends AbstractController
 {
-    #[Route('/dossier', name: 'app_dossier')]
+    #[Route('/', name: 'app_dossier')]
     public function index(): Response
     {
         return $this->render('dossier/index.html.twig', [
@@ -28,6 +31,56 @@ class DossierController extends AbstractController
 
         ]);
     }
+
+    #[Route('/fichier/{path}', name: 'app_serve_fichier', requirements: ['path' => '.+'])]
+public function serveFichier(string $path,Security $security): BinaryFileResponse
+{
+    $baseDir = $this->getParameter('uploads_directory'); // ex: /home/user/mon-projet/uploads
+
+    $fullPath = $baseDir . '/' . $path;
+
+    if (!file_exists($fullPath)) {
+        throw new NotFoundHttpException('Fichier non trouvé.');
+    }
+
+
+      $user = $security->getUser();
+    if (!$user) {
+        throw new AccessDeniedHttpException('Vous devez être connecté.');
+    }
+
+    $username = $user->getNom(); // ou ->getUserIdentifier() selon ton User
+
+    if (!str_starts_with($path, $username . '/')) {
+        throw new AccessDeniedHttpException('Accès interdit à ce fichier.');
+    }
+
+    $response = new BinaryFileResponse($fullPath);
+    $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($fullPath));
+
+    return $response;
+}
+
+
+
+    #[Route('/test-upload-create')]
+public function testUploadCreate(): Response
+{
+    $baseDir = $this->getParameter('uploads_directory'); // ex: /var/www/stokini/StokiniDev/uploads
+    $testDir = $baseDir . '/test123';
+
+    try {
+        if (!is_dir($testDir)) {
+            if (!mkdir($testDir, 0775, true)) {
+                return new Response("❌ Échec de création du dossier : $testDir", 500);
+            }
+        }
+
+        return new Response("✅ Dossier créé avec succès : $testDir");
+    } catch (\Throwable $e) {
+        return new Response("❌ Erreur : " . $e->getMessage(), 500);
+    }
+}
 
 
     #[Route('/dossier/create', name: 'app_dossier_create', methods: ['POST'])]
@@ -51,7 +104,8 @@ class DossierController extends AbstractController
         $dossier->setCreatedBy($user->getNom());
         $em->persist($dossier);
         $em->flush();
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
+       // $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
+       $uploadDir = $this->getParameter('uploads_directory') . '/'. $user->getNom() . '/' . $dossier->getNom();
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0775, true); // crée le dossier récursivement
@@ -136,6 +190,8 @@ class DossierController extends AbstractController
         if (!$dossier) {
             throw $this->createNotFoundException('Dossier non trouvé.');
         }
+
+        
 
         // Crée formulaire upload
         $form = $this->createForm(FichierType::class);

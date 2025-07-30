@@ -40,8 +40,11 @@ security:
     access_control:
         - { path: ^/upload, roles: ROLE_USER }
         - { path: ^/fichiers, roles: ROLE_USER }
+        - { path: ^/dossier/, roles: ROLE_USER }
         - { path: ^/register, roles: IS_AUTHENTICATED_ANONYMOUSLY }
         - { path: ^/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        
+        
         # - { path: ^/admin, roles: ROLE_ADMIN }
         # - { path: ^/profile, roles: ROLE_USER }
 

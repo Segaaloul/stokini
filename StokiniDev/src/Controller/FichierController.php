@@ -16,10 +16,10 @@ use Symfony\Component\Security\Core\Security;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use App\Entity\User;
 use Symfony\Component\Filesystem\Filesystem;
-
+#[Route('/fichier')] // 👈 prefix ici
 class FichierController extends AbstractController
 {
-    #[Route('/fichier', name: 'app_fichier')]
+    #[Route('/', name: 'app_fichier')]
     public function index(): Response
     {
         return $this->render('fichier/index.html.twig', [

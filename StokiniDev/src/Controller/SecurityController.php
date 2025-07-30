@@ -31,8 +31,12 @@ class SecurityController extends AbstractController
     }
 
     #[Route('/', name: 'app_home')]
-    public function home(): Response
+    public function home(Security $security): Response
     {
+        $users = $security->getUser();
+        if($user){
+            return $this->redirectToRoute('app_fichiers');
+        }
         return $this->redirectToRoute('app_login');
     }
 

@@ -48,10 +48,14 @@ class RegistrationController extends AbstractController
 
             $entityManager->persist($user);
             $entityManager->flush();
-            $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/' . $user->getNom();
+            $uploadDir = $this->getParameter('uploads_directory') .'/' . $user->getNom();
 
             if (!file_exists($uploadDir)) {
-                mkdir($uploadDir, 0775, true); // crée le dossier récursivement
+                //mkdir($uploadDir, 0775, true); // crée le dossier récursivement
+                if (!mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+                        throw new \RuntimeException(sprintf('Impossible de créer le dossier : %s', $uploadDir));
+                    }
+
             }
 
             // Connecte automatiquement l'utilisateur (optionnel)
