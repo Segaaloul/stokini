@@ -17,16 +17,71 @@ use App\Repository\UserRepository;
 use App\Repository\DossierRepository;
 use Symfony\Component\Security\Core\Security;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
+#[Route('/dossier')] // 👈 prefix ici
 class DossierController extends AbstractController
 {
-    #[Route('/dossier', name: 'app_dossier')]
+    #[Route('/', name: 'app_dossier')]
     public function index(): Response
     {
         return $this->render('dossier/index.html.twig', [
             'controller_name' => 'DossierController',
 
         ]);
+    }
+
+    #[Route('/fichier/{path}', name: 'app_serve_fichier', requirements: ['path' => '.+'])]
+    public function serveFichier(string $path, Security $security): BinaryFileResponse
+    {
+        $baseDir = $this->getParameter('uploads_directory'); // ex: /home/user/mon-projet/uploads
+
+        $fullPath = $baseDir . '/' . $path;
+
+        if (!file_exists($fullPath)) {
+            throw new NotFoundHttpException('Fichier non trouvé.');
+        }
+
+
+        $user = $security->getUser();
+        if (!$user) {
+            throw new AccessDeniedHttpException('Vous devez être connecté.');
+        }
+
+        //$username = $user->getNom(); // ou ->getUserIdentifier() selon ton User
+
+        // if (!str_starts_with($path, $username . '/')) {
+        //     throw new AccessDeniedHttpException('Accès interdit à ce fichier.');
+        // }
+
+        $response = new BinaryFileResponse($fullPath);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($fullPath));
+
+        return $response;
+    }
+
+
+
+    #[Route('/test-upload-create')]
+    public function testUploadCreate(): Response
+    {
+        $baseDir = $this->getParameter('uploads_directory'); // ex: /var/www/stokini/StokiniDev/uploads
+        $testDir = $baseDir . '/test123';
+
+        try {
+            if (!is_dir($testDir)) {
+                if (!mkdir($testDir, 0775, true)) {
+                    return new Response("❌ Échec de création du dossier : $testDir", 500);
+                }
+            }
+
+            return new Response("✅ Dossier créé avec succès : $testDir");
+        } catch (\Throwable $e) {
+            return new Response("❌ Erreur : " . $e->getMessage(), 500);
+        }
     }
 
 
@@ -51,7 +106,8 @@ class DossierController extends AbstractController
         $dossier->setCreatedBy($user->getNom());
         $em->persist($dossier);
         $em->flush();
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
+        // $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
+        $uploadDir = $this->getParameter('uploads_directory') . '/' . $user->getNom() . '/' . $dossier->getNom();
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0775, true); // crée le dossier récursivement
@@ -89,9 +145,12 @@ class DossierController extends AbstractController
         $user = $security->getUser();
 
         if (!$user instanceof User) {
-            throw $this->createAccessDeniedException();
+            throw $this->createAccessDeniedException('Vous devez être connecté pour voir cette page.');
         }
 
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('app_login'); // ou AccessDenied
+        }
         // Récupérer les dossiers liés à l'utilisateur connecté
         $dossiers = $em->getRepository(Dossier::class)->createQueryBuilder('d')
             ->join('d.users', 'u')
@@ -117,6 +176,41 @@ class DossierController extends AbstractController
         ]);
     }
 
+    #[Route('/fichier/{path}', name: 'app_serve_file', requirements: ['path' => '.+'])]
+    public function serveFile(string $path, Security $security, EntityManagerInterface $em): Response
+    {
+        // Vérifie que l'utilisateur est connecté
+        $user = $security->getUser();
+
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException("Vous devez être connecté pour créer un dossier.");
+        }
+
+        // Reconstruire le chemin absolu
+        $basePath = $this->getParameter('kernel.project_dir') . '/uploads';
+        $fullPath = $basePath . '/' . $path;
+
+        // Vérifie que le fichier existe
+        if (!file_exists($fullPath) || !is_readable($fullPath)) {
+            throw $this->createNotFoundException('Fichier introuvable');
+        }
+
+        // Vérifie que le fichier appartient bien à l'utilisateur connecté
+        // (en fonction de ton système, ici tu dois retrouver l'entité Fichier)
+        $fichier = $em->getRepository(Fichier::class)->findOneBy(['chemin' => $path]);
+
+        if (!$fichier) {
+            throw $this->createNotFoundException('Fichier non trouvé en base');
+        }
+
+        // Vérifie que l'utilisateur a le droit d'y accéder (ex : appartient à lui)
+        if ($fichier->getUtilisateur() !== $user) {
+            throw $this->createAccessDeniedException('Accès refusé à ce fichier');
+        }
+
+        // OK, renvoyer le fichier
+        return new BinaryFileResponse($fullPath);
+    }
 
 
 
@@ -137,6 +231,8 @@ class DossierController extends AbstractController
             throw $this->createNotFoundException('Dossier non trouvé.');
         }
 
+
+
         // Crée formulaire upload
         $form = $this->createForm(FichierType::class);
         $form->handleRequest($request);
@@ -148,7 +244,9 @@ class DossierController extends AbstractController
                 foreach ($files as $file) {
                     $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
                     $safeFilename = $slugger->slug($originalFilename);
-                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+                    // $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+                    $extension = $file->guessExtension() ?? pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
 
                     $file->move($this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom(),  $newFilename);
 
@@ -209,5 +307,83 @@ class DossierController extends AbstractController
         $em->flush();
 
         return $this->redirectToRoute('app_fichiers');
+    }
+
+
+
+
+
+    #[Route('/dossiertaille', name: 'app_dossier_taille')]
+    public function tailleDossier(): Response
+    {
+        $chemin = $this->getParameter('uploads_directory') . '/';
+        $taille = $this->getFolderSize($chemin);
+        $tailleLisible = $this->formatSize($taille);
+
+        return $this->render('admin/stats_stockage.html.twig', [
+            'taille' => $tailleLisible,
+        ]);
+    }
+
+    private function getFolderSize(string $folderPath): int
+    {
+        $size = 0;
+
+        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($folderPath, \FilesystemIterator::SKIP_DOTS)) as $file) {
+            $size += $file->getSize();
+        }
+
+        return $size;
+    }
+
+    private function formatSize(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = 0;
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+
+
+    #[Route('/admin/stats-stockage', name: 'app_stats_stockage')]
+    public function statsStockage(UserRepository $userRepository, EntityManagerInterface $em): Response
+    {
+        $basePath = $this->getParameter('uploads_directory');
+
+        $users = $userRepository->findAll();
+        $data = [];
+
+        $listefichiers = $em->getRepository(Fichier::class)->findAll();
+        $nombredefichiers = count($listefichiers);
+
+        $listedossiers = $em->getRepository(Dossier::class)->findAll();
+        $nombrededossiers = count($listedossiers);
+
+        foreach ($users as $user) {
+            $userNom = $user->getNom();
+            $userFolder = $basePath . '/' . $userNom;
+            // if (!is_dir($userFolder)) {
+            //     continue; // on saute cet utilisateur
+            // }
+            $size = $this->getFolderSize($userFolder); // taille en octets
+
+            $data[] = [
+                'nom' => $user->getNom(), // ou getEmail(), ou getUsername()
+                'taille' => round($size / 1048576, 2), // convertie en MB
+            ];
+        }
+        $taille = $this->getFolderSize($basePath);
+        $tailleMainFolder = $this->formatSize($taille);
+
+        return $this->render('admin/stats_stockage.html.twig', [
+            'stockages' => $data,
+            'tailleMainFolder' => $tailleMainFolder,
+            'nombredefichiers' => $nombredefichiers,
+            'nombrededossiers' => $nombrededossiers
+        ]);
     }
 }

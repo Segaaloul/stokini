@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accès Refusé - 403</title>
+    <link rel="stylesheet" href="style.css">
+    {# Vendors CSS #}
+<link rel="stylesheet" href="{{ asset('assets/access-denied/style.css') }}" />
+
+{# Helpers JS #}
+<script src="{{ asset('assets/access-denied/script.js') }}"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="background-animation">
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+                <div class="shape shape-4"></div>
+                <div class="shape shape-5"></div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="error-icon">
+                <i class="fas fa-shield-alt"></i>
+                <div class="pulse-ring"></div>
+            </div>
+            
+            <div class="error-code">
+                <span class="code-number">403</span>
+                <div class="glitch-overlay">403</div>
+            </div>
+            
+            <h1 class="error-title">Accès Refusé</h1>
+            
+            <p class="error-description">
+                Désolé, vous n'avez pas l'autorisation d'accéder à cette ressource. 
+                Vos permissions actuelles ne permettent pas de consulter cette page.
+            </p>
+            
+            <div class="error-details">
+                <div class="detail-item">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Permissions insuffisantes</span>
+                </div>
+                <div class="detail-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="timestamp"></span>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                    Retour
+                </button>
+                <button class="btn btn-secondary" onclick="goHome()">
+                    <i class="fas fa-home"></i>
+                    Accueil
+                </button>
+                <button class="btn btn-contact" onclick="contactSupport()">
+                    <i class="fas fa-envelope"></i>
+                    Support
+                </button>
+            </div>
+            
+            <div class="help-section">
+                <h3>Que puis-je faire ?</h3>
+                <ul class="help-list">
+                    <li><i class="fas fa-check"></i> Vérifiez que vous êtes connecté avec le bon compte</li>
+                    <li><i class="fas fa-check"></i> Contactez l'administrateur pour obtenir les permissions</li>
+                    <li><i class="fas fa-check"></i> Retournez à la page précédente</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2025 - Système de sécurité activé</p>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
+

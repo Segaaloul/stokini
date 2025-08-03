@@ -2,6 +2,7 @@
 
 namespace App\Security;
 
+use App\Entity\User;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,25 +16,42 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
 use Symfony\Component\Security\Http\Authenticator\Passport\Credentials\PasswordCredentials;
 use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\Util\TargetPathTrait;
+use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
+use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\UserRepository;
 
 class AuthUserAuthenticator extends AbstractLoginFormAuthenticator
 {
     use TargetPathTrait;
 
     public const LOGIN_ROUTE = 'app_login';
-
-    public function __construct(private UrlGeneratorInterface $urlGenerator)
+    private UserRepository $userRepository;
+    private UrlGeneratorInterface $urlGenerator;
+    public function __construct(UserRepository $userRepository, UrlGeneratorInterface $urlGenerator)
     {
+        $this->userRepository = $userRepository;
+        $this->urlGenerator = $urlGenerator;
     }
 
     public function authenticate(Request $request): Passport
     {
         $email = $request->request->get('email', '');
-
         $request->getSession()->set(Security::LAST_USERNAME, $email);
 
         return new Passport(
-            new UserBadge($email),
+            new UserBadge($email, function ($userIdentifier) {
+                $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
+
+                if (!$user) {
+                    throw new CustomUserMessageAuthenticationException('Utilisateur non trouvé.');
+                }
+
+                if ($user->getIsActive() === 0) {
+                    throw new CustomUserMessageAuthenticationException('Votre compte est bloqué.');
+                }
+
+                return $user;
+            }),
             new PasswordCredentials($request->request->get('password', '')),
             [
                 new CsrfTokenBadge('authenticate', $request->request->get('_csrf_token')),
@@ -42,6 +60,22 @@ class AuthUserAuthenticator extends AbstractLoginFormAuthenticator
         );
     }
 
+    // public function authenticate(Request $request): Passport
+    // {
+    //     $email = $request->request->get('email', '');
+
+    //     $request->getSession()->set(Security::LAST_USERNAME, $email);
+
+    //     return new Passport(
+    //         new UserBadge($email),
+    //         new PasswordCredentials($request->request->get('password', '')),
+    //         [
+    //             new CsrfTokenBadge('authenticate', $request->request->get('_csrf_token')),
+    //             new RememberMeBadge(),
+    //         ]
+    //     );
+    // }
+
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
@@ -49,11 +83,11 @@ class AuthUserAuthenticator extends AbstractLoginFormAuthenticator
         }
 
         // si l authentification est correcte alors je serait rediriger ici
-        return new RedirectResponse($this->urlGenerator->generate('app_fichiers'));
+        return new RedirectResponse($this->urlGenerator->generate('app_home'));
 
         // For example:
         // return new RedirectResponse($this->urlGenerator->generate('some_route'));
-        throw new \Exception('TODO: provide a valid redirect inside '.__FILE__);
+        throw new \Exception('TODO: provide a valid redirect inside ' . __FILE__);
     }
 
     protected function getLoginUrl(Request $request): string

@@ -16,10 +16,16 @@ use Symfony\Component\Security\Core\Security;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use App\Entity\User;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use App\Repository\DossierRepository;
+use App\Repository\FichierRepository;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
+#[Route('/fichier')] // 👈 prefix ici
 class FichierController extends AbstractController
 {
-    #[Route('/fichier', name: 'app_fichier')]
+    #[Route('/', name: 'app_fichier')]
     public function index(): Response
     {
         return $this->render('fichier/index.html.twig', [
@@ -106,6 +112,7 @@ class FichierController extends AbstractController
 
 
 
+
     #[Route('/fichier/supprimer/{id}', name: 'app_fichier_supprimer')]
     public function supprimer(int $id, EntityManagerInterface $em): RedirectResponse
     {
@@ -115,6 +122,7 @@ class FichierController extends AbstractController
             throw $this->createNotFoundException('Fichier non trouvé');
         }
 
+        $dossier = $fichier->getDossier();
         $filesystem = new Filesystem();
         $cheminFichier = $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
 
@@ -125,6 +133,149 @@ class FichierController extends AbstractController
         $em->remove($fichier);
         $em->flush();
 
-        return $this->redirectToRoute('app_fichiers');
+        return $this->redirectToRoute('app_dossier_afficher', ['id' => $dossier->getId()]); // ou ta route de liste
+    }
+
+
+    #[Route('/fichier/dupliquer/{{path}/{id}', name: 'app_fichier_dupliquer', requirements: ['path' => '.+'])]
+    public function dupliquerFichier(string $path, EntityManagerInterface $em, int $id): Response
+    {
+        $basePath = $this->getParameter('uploads_directory') . '/';
+        $originalPath = $basePath . '/' . $path;
+
+        if (!file_exists($originalPath)) {
+            throw $this->createNotFoundException('Fichier original introuvable');
+        }
+
+        // Créer un nouveau nom de fichier
+        $extension = pathinfo($originalPath, PATHINFO_EXTENSION);
+        $newName = uniqid() . '.' . $extension;
+        $dir = dirname($originalPath);
+        $newPath = $dir . '/' . $newName;
+
+        // Copier le fichier
+        if (!copy($originalPath, $newPath)) {
+            throw new \Exception('Erreur lors de la duplication du fichier.');
+        }
+
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+        // Enregistrement BDD
+        $nouveauFichier = new Fichier();
+        $nouveauFichier->setNom('Copie de ' . basename($path));
+        $nouveauFichier->setChemin(str_replace($basePath . '/', '', $newPath)); // chemin relatif
+        $nouveauFichier->setUploadedAt(new \DateTimeImmutable());
+        $nouveauFichier->setDossier($dossier); // ou le dossier auquel il appartient
+        // Si tu veux attribuer à l'utilisateur connecté :
+        // $nouveauFichier->setUser($this->getUser());
+
+        $em->persist($nouveauFichier);
+        $em->flush();
+
+        $this->addFlash('success', 'Fichier dupliqué avec succès !');
+
+        return $this->redirectToRoute('app_dossier_afficher', ['id' => $dossier->getId()]); // ou ta route de liste
+    }
+
+
+
+    #[Route('/fichiers/delete-selection', name: 'app_fichiers_supprimer_selection', methods: ['POST'])]
+    public function deleteSelection(
+        Request $request,
+        FichierRepository $fichierRepo,
+        DossierRepository $dossierRepo,
+        EntityManagerInterface $em
+    ): JsonResponse {
+        $data = json_decode($request->getContent(), true);
+
+        $ids = $data['ids'] ?? [];
+        $dossierId = $data['dossierId'] ?? null;
+
+        // ⚠️ Tu peux réactiver ceci une fois que tout fonctionne
+        if (!$this->isCsrfTokenValid('supprimer_fichiers', $request->headers->get('X-CSRF-TOKEN'))) {
+            return new JsonResponse(['error' => 'Invalid CSRF token'], 400);
+        }
+
+        if (!$dossierId || !$dossierRepo->find($dossierId)) {
+            return new JsonResponse(['error' => 'Dossier introuvable'], 400);
+        }
+
+        foreach ($ids as $id) {
+            $fichier = $fichierRepo->find($id);
+            if ($fichier && $fichier->getDossier()->getId() === $dossierId) {
+                $cheminFichier = $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
+
+                if ((new Filesystem())->exists($cheminFichier)) {
+                    (new Filesystem())->remove($cheminFichier);
+                }
+
+                $em->remove($fichier);
+            }
+        }
+
+        $em->flush();
+
+        return new JsonResponse(['success' => true]);
+    }
+
+
+    #[Route('/editeur-fichier/{id}', name: 'app_editeur_fichier')]
+    public function editeurFichier(int $id, FichierRepository $fichierRepository): Response
+    {
+        $fichier = $fichierRepository->find($id);
+
+        if (!$fichier) {
+            throw $this->createNotFoundException("Fichier non trouvé.");
+        }
+
+        $cheminFichier =  $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
+
+        $ext = strtolower(pathinfo($cheminFichier, PATHINFO_EXTENSION));
+
+        $extensionsAutorisees = ['txt', 'md', 'json', 'html'];
+        if (!in_array($ext, $extensionsAutorisees)) {
+            throw new \Exception("Ce format de fichier ne peut pas être édité.");
+        }
+
+
+        if (!file_exists($cheminFichier) || !is_readable($cheminFichier)) {
+            throw $this->createNotFoundException("Le fichier physique est introuvable.");
+        }
+
+        $contenu = file_get_contents($cheminFichier);
+
+        return $this->render('fichier/editeur.html.twig', [
+            'contenu' => $contenu,
+            'fichier' => $fichier,
+        ]);
+    }
+
+
+    #[Route('/enregistrer-fichier/{id}', name: 'app_enregistrer_fichier', methods: ['POST'])]
+    public function enregistrerFichier(int $id, Request $request, FichierRepository $fichierRepository): Response
+    {
+        $fichier = $fichierRepository->find($id);
+
+        if (!$fichier) {
+            throw $this->createNotFoundException("Fichier non trouvé.");
+        }
+
+        $submittedToken = $request->request->get('_token');
+
+        if (!$this->isCsrfTokenValid('editer_fichier_' . $id, $submittedToken)) {
+            throw $this->createAccessDeniedException('Token CSRF invalide.');
+        }
+
+        $cheminFichier =  $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
+
+        if (!is_writable($cheminFichier)) {
+            throw $this->createAccessDeniedException("Le fichier n'est pas modifiable.");
+        }
+
+        $contenu = $request->request->get('contenu');
+        file_put_contents($cheminFichier, $contenu);
+
+        $this->addFlash('success', 'Fichier modifié avec succès.');
+
+        return $this->redirectToRoute('app_editeur_fichier', ['id' => $id]);
     }
 }

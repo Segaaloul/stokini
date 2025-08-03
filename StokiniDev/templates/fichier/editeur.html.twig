@@ -1,0 +1,25 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Éditeur de fichier{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y">
+<h2>Édition du fichier : {{ fichier.nom }}</h2>
+
+<form method="post" action="{{ path('app_enregistrer_fichier', {id: fichier.id}) }}">
+    <textarea id="editor" name="contenu" style="min-height: 400px;">{{ contenu|e }}</textarea>
+    <button type="submit" class="btn btn-primary mt-3">Enregistrer</button>
+<input type="hidden" name="_token" value="{{ csrf_token('editer_fichier_' ~ fichier.id) }}">
+
+</form>
+
+</div>
+<script src="https://cdn.ckeditor.com/ckeditor5/38.0.1/classic/ckeditor.js"></script>
+<script>
+ClassicEditor
+    .create(document.querySelector('#editor'))
+    .catch(error => {
+        console.error(error);
+    });
+</script>
+{% endblock %}

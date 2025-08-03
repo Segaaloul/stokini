@@ -1,0 +1,229 @@
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Hôte : localhost
+-- Généré le : mer. 04 juin 2025 à 14:57
+-- Version du serveur : 10.4.28-MariaDB
+-- Version de PHP : 8.2.4
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Base de données : `u765816727_clubequus`
+--
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `images`
+--
+
+CREATE TABLE `images` (
+  `id` int(11) NOT NULL,
+  `type` varchar(50) NOT NULL,
+  `description` text DEFAULT NULL,
+  `path` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `images`
+--
+
+INSERT INTO `images` (`id`, `type`, `description`, `path`) VALUES
+(1, 'SiteStructure', 'image back ground home page', 'assets/img/imgendurance.webp'),
+(2, 'SiteStructure', 'Image Service pour endurance', 'assets/img/imgabout.webp'),
+(3, '3rd', 'image about a droite', 'assets/img/IMG_2401.webp'),
+(4, 'SiteStructure', 'Image Service pour endurance', 'assets/img/IMG_8748.webp'),
+(5, '6th', 'Image Service pour Ride', 'assets/img/IMG_1790.webp'),
+(6, '7th', 'Image Service pour Lessons', 'assets/img/IMG_2427.webp'),
+(7, '7th', 'Image pour Balade', 'assets/img/hamza.webp'),
+(8, '8th', 'Image pour B&B', 'assets/img/cozy-breakfast-tray-featuring-pastries-fruit-steaming-cup-coffee_931778-56645.webp'),
+(9, '9th', 'Image pour Attelage', 'assets/img/attelage.webp'),
+(10, '10th', 'Image pour Pension', 'assets/img/clubhouse.webp'),
+(105, 'rides', 'moutain', 'assets/img/6839da71be9de_IMG_9016 2.jpg'),
+(106, 'endurance', 'Winning 1rst place 🏆, 100 km race in Sfax ', 'assets/img/6839dcfa8c5f8_IMG_4095.jpeg'),
+(107, 'rides', 'Mountain ride', 'assets/img/6839ea64a0e97_IMG_9054.jpeg'),
+(108, 'swim', 'Swim with tornado', 'assets/img/683abb843e578_IMG_6939.jpeg'),
+(109, 'swim', 'Heaven', 'assets/img/683abbdab473b_IMG_1464.jpeg'),
+(110, 'lessons', 'Preparing for surfing ', 'assets/img/683abc7442a3e_IMG_1312.jpeg'),
+(111, 'rides', 'Sunset 🌅 ', 'assets/img/683abccb1dc1f_IMG_0578.jpeg'),
+(112, 'swim', 'Surfing 🏄 ', 'assets/img/683abd36645e8_IMG_6577.jpeg'),
+(113, 'endurance', 'Endurance racing in Tataouine', 'assets/img/683abebacd939_IMG_2549.jpeg'),
+(114, 'rides', 'To the beach 🏖️ ', 'assets/img/683abf3bc0f40_IMG_6116.jpeg');
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `infos`
+--
+
+CREATE TABLE `infos` (
+  `id` int(11) NOT NULL,
+  `dateInfo` date NOT NULL,
+  `description` text NOT NULL,
+  `idUser` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `infos`
+--
+
+INSERT INTO `infos` (`id`, `dateInfo`, `description`, `idUser`) VALUES
+(1, '2025-06-04', 'Post ajouté : aaa par Sami', 20),
+(2, '2025-06-04', 'Post supprimé : 19 par Selim', 16),
+(3, '2025-06-04', 'Post supprimé : 21 par Sami', 20),
+(4, '2025-06-04', 'Post supprimé : 24 par Sami', 20),
+(5, '2025-06-04', 'Post supprimé : 12 par Selim', 16),
+(6, '2025-06-04', 'Post supprimé : 18 par Selim', 16),
+(7, '2025-06-04', 'Post supprimé : 17 par Selim', 16),
+(8, '2025-06-04', 'Nouvelle image ajoutée : 2 par le User : Sami', 20),
+(9, '2025-06-04', 'Image supprimée : 116 par le User : Selim', 16),
+(10, '2025-06-04', 'Post modifié : last par le User : Sami', 20),
+(11, '2025-06-04', 'Nouveau Post ajouté : balade a la montage  par le User Sami', 20),
+(12, '2025-06-04', 'Nouveau Post ajouté : lll par le User Sami', 20),
+(13, '2025-06-04', 'Nouveau Post ajouté : bb par le User Sami', 20),
+(14, '2025-06-04', 'Un Post a ete supprimé : id:22 par le User:Sami', 20),
+(15, '2025-06-04', 'Post modifié : balade a la plage par le User : Sami', 20),
+(16, '2025-06-04', 'Post modifié : course d\'endurance par le User : Sami', 20);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `posts`
+--
+
+CREATE TABLE `posts` (
+  `id` int(11) NOT NULL,
+  `titre` varchar(255) NOT NULL,
+  `datePublication` datetime NOT NULL,
+  `description` text NOT NULL,
+  `pathImage` varchar(255) DEFAULT NULL,
+  `userId` int(11) NOT NULL,
+  `nbLikes` int(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `posts`
+--
+
+INSERT INTO `posts` (`id`, `titre`, `datePublication`, `description`, `pathImage`, `userId`, `nbLikes`) VALUES
+(13, 'balade a la montage ', '2025-06-03 18:32:06', 'bbbbb', 'assets/img/uploadsPost/87caf8e8-91d4-4793-a8e7-7329de312384.JPG', 16, 4),
+(14, 'test16', '2025-06-03 18:33:08', 'hhhhhh', 'assets/img/uploadsPost/92750a77-e94d-4e38-b33a-a07840d13f6d.JPG', 16, 4),
+(23, 'last', '2025-06-03 23:29:28', 'lasthgbhahahhahahahahahahaahhahhahah\r\nhahahahahhahhahhahh', 'assets/img/uploadsPost/2ec099da-2701-4d4e-9d8d-691b5c5a00d9.JPG', 20, 14),
+(25, 'balade a la montage ', '2025-06-04 02:18:11', 'hhhhhhbnbnbn', 'assets/img/uploadsPost/2ec099da-2701-4d4e-9d8d-691b5c5a00d9.JPG', 20, 7),
+(26, 'balade a la plage', '2025-06-04 02:21:05', 'Au rythme des sabots dans le sable mouillé, la balade à cheval sur la plage offre un moment suspendu entre ciel et mer. Le vent caresse le visage, l’écume chatouille les jambes des montures, et chaque foulée laisse une empreinte éphémère sur le rivage.', 'assets/img/uploadsPost/3e40b641-32b3-4b5c-8579-76f71f43ca3f.JPG', 20, 5),
+(27, 'course d\'endurance', '2025-06-04 02:21:16', 'belle course a sfax', 'assets/img/uploadsPost/5a8a9efa-5312-4590-b6eb-f214cfff8996.JPG', 20, 40);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `role` int(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `users`
+--
+
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `created_at`, `role`) VALUES
+(16, 'Selim', 'selim03gaaloul@gmail.com', '$2y$10$stdpdqSuU0l6e2cJlBAObeQPCDT79Yu/1ZKcpS9cUtJ.PLTZe7B72', '2025-05-26 06:40:04', 1),
+(19, 'Sylviane', 'famillehirtgaaloul@bluewin.ch', '$2y$10$gEC9RHbT24dTue9kv.Ghbek7VmYqKaekhNzhvGH5CW9M9gahOpPya', '2025-05-30 12:18:26', 0),
+(20, 'Sami', 'sami@gmail.com', '$2y$10$8wNZ5xf/xpr4rd90uWlP5e2cIE9aotXwDSRaRiI8gd9dF24UKxX6y', '2025-05-30 12:18:53', 0),
+(21, 'test', 'test@gmail.com', '$2y$10$xVHrEZeGez35s7RbRPuFoOPxN9iklxfTm8dUB7hoGb4sJpUBdFL.6', '2025-06-03 15:27:55', 0);
+
+--
+-- Index pour les tables déchargées
+--
+
+--
+-- Index pour la table `images`
+--
+ALTER TABLE `images`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Index pour la table `infos`
+--
+ALTER TABLE `infos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idUser` (`idUser`);
+
+--
+-- Index pour la table `posts`
+--
+ALTER TABLE `posts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `userId` (`userId`);
+
+--
+-- Index pour la table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`);
+
+--
+-- AUTO_INCREMENT pour les tables déchargées
+--
+
+--
+-- AUTO_INCREMENT pour la table `images`
+--
+ALTER TABLE `images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=117;
+
+--
+-- AUTO_INCREMENT pour la table `infos`
+--
+ALTER TABLE `infos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+
+--
+-- AUTO_INCREMENT pour la table `posts`
+--
+ALTER TABLE `posts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+
+--
+-- AUTO_INCREMENT pour la table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+
+--
+-- Contraintes pour les tables déchargées
+--
+
+--
+-- Contraintes pour la table `infos`
+--
+ALTER TABLE `infos`
+  ADD CONSTRAINT `infos_ibfk_1` FOREIGN KEY (`idUser`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Contraintes pour la table `posts`
+--
+ALTER TABLE `posts`
+  ADD CONSTRAINT `posts_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

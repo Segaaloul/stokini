@@ -1,0 +1,58 @@
+{% extends 'base.html.twig' %}
+
+
+{% block content %}
+
+ <div class="container-xxl flex-grow-1 container-p-y">
+<div class="card" >
+  <h5 class="card-header">Liste des utilisateurs</h5>
+  <div class="table-responsive text-nowrap" >
+    <table class="table" >
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Rôles</th>
+          <th>Nom</th>
+          <th>État</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0" >
+        {% for user in users %}
+          <tr>
+            <td><i class="bx bx-user me-2 text-primary"></i> <strong>{{ user.id }}</strong></td>
+            <td>{{ user.email }}</td>
+            <td>
+              <ul class="list-unstyled m-0">
+                {% for role in user.roles %}
+                  <li>{{ role }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+            <td>{{ user.nom }}</td>
+            <td>
+              {% if user.isActive %}
+                <span class="badge bg-label-success me-1">Actif</span>
+              {% else %}
+                <span class="badge bg-label-danger me-1">Bloqué</span>
+              {% endif %}
+            </td>
+            <td style="position: relative;">
+             <a href="{{ path('user_state_toggle', {'id': user.id}) }}" class="btn btn-warning">Toggle State</a>
+
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center">Aucun utilisateur trouvé.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+              
+              </div>
+{% endblock %}

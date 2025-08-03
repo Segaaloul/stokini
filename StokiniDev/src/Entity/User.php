@@ -24,6 +24,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private array $roles = [];
 
+    #[ORM\Column]
+    private ?int $isActive = null;
+
     #[ORM\ManyToMany(targetEntity: Dossier::class, mappedBy: 'users')]
     private Collection $dossiersPartages;
 
@@ -46,6 +49,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+
     public function removeDossierPartage(Dossier $dossier): self
     {
         if ($this->dossiersPartages->removeElement($dossier)) {
@@ -54,6 +58,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
+    public function getIsActive(): ?int
+    {
+        return $this->isActive;
+    }
+
+    public function setIsActive(int $isActive): static
+    {
+        $this->isActive = $isActive;
+
+        return $this;
+    }
 
 
     /**
