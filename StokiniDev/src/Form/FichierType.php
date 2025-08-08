@@ -9,6 +9,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Validator\Constraints\File;
+
 class FichierType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -25,6 +26,7 @@ class FichierType extends AbstractType
         'mapped' => false, // pas relié à une propriété de l'entité
         'multiple' => true, // 👈 pour accepter plusieurs fichiers
         'required' => true,
+        
         
     ]);
     }

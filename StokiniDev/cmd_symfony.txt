@@ -12,6 +12,7 @@ symfony server:start
 symfony server:stop
 
 
+php bin/console cache:clear
 
 
 

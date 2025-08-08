@@ -1,0 +1,62 @@
+commandes utile
+
+
+mysql -u root -p
+show databases;
+
+CREATE DATABASE stokini;
+
+
+USE nom_de_la_base;
+
+
+
+DROP DATABASE nom_de_la_base;
+
+
+SHOW TABLES;
+
+
+CREATE TABLE utilisateurs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nom VARCHAR(100),
+  email VARCHAR(100),
+  date_inscription DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+
+DESCRIBE utilisateurs;
+
+
+DROP TABLE utilisateurs;
+
+
+RENAME TABLE anciens_utilisateurs TO utilisateurs;
+
+
+INSERT INTO utilisateurs (nom, email) VALUES ('Selim', 'selim@example.com');
+
+SELECT * FROM utilisateurs;
+
+
+UPDATE utilisateurs SET email = 'newmail@example.com' WHERE id = 1;
+
+
+DELETE FROM utilisateurs WHERE id = 1;
+
+
+GRANT ALL PRIVILEGES ON nom_de_la_base.* TO 'newuser'@'localhost';
+
+
+["ROLE_USER"],["ROLE_ADMIN"]
+
+
+
+
+
+DROP DATABASE stokini;
+
+
+
+UPDATE user SET roles = '["ROLE_ADMIN"]' WHERE id = 1;
+

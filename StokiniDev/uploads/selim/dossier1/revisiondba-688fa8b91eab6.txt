@@ -1,0 +1,299 @@
+
+--Pour supprimer le tablespace dans le cas où il existe déjà :
+DROP tablespace TBL02 including contents and datafiles;
+
+CREATE TABLESPACE TBL02
+DATAFILE 'c:\....\fd01tbl02.dbf' SIZE 10M,
+'c:\....\fd02tbl02.dbf' SIZE 10M,
+'c:\....\fd0xtbl02.dbf' SIZE 5M;
+
+
+pour ajouter un datafile
+ALTER TABLESPACE TBL01 ADD DATAFILE 'c\....\...fd03tbl01.dbf' SIZE 20M;
+
+ou
+
+ALTER TABLESPACE TBL01 ADD DATAFILE
+'c\.....\fd04tbl01.dbf' SIZE 2M AUTOEXTEND ON
+NEXT 1M MAXSIZE 4M;
+
+
+Pour renommer un fichier il faut passer par 4 étapes :
+1 Rendre le tablespace OFFLINE :
+ALTER TABLESPACE TBL02 OFFLINE;
+2 Renommer le fichier physiquement.
+HOST MOVE C:\....\fd0xb102.DBF  c:\....\fd03b102.DBF
+//oubien 
+renommer manuellement le fichier physique
+3 Renommer le fichier logiquement :
+ALTER TABLESPACE TBL02 rename datafile 'c:\...\fd0Xtbl02.dbf' 
+TO 'c:\...\fd03tbl02.dbf';
+4 Rendre le tablespace ONLINE :
+ALTER TABLESPACE TBL02 ONLINE; 
+
+pour afficher toutes les nom des tablespace
+Select tablespace_name from dba_tablespaces;
+
+
+exemple de function stockee
+CREATE OR REPLACE FUNCTION FN_NBR_TAB_TEMP 
+RETURN INTEGER
+IS
+nb integer;
+BEGIN
+select count(*) into nb
+from dba_tablespaces where contents='TEMPORARY';
+return nb;
+END;
+/
+
+cree un utilisateur en lui affecte un tablespace par defaut
+CREATE USER TD3 identified by TD3 DEFAULT TABLESPACE TBL01;
+
+pour afficher les tablespace temporaire d'un user
+select temporary_tablespace from dba_users 
+where username ='TD3';
+
+
+changer le quota d'un user sur un tablespace
+ALTER USER TD3 quota 50M on USERS;
+
+
+---------------------------------------------partie users tp3----------------
+
+pour cree un profile ;
+
+CREATE PROFILE profil_tp3 LIMIT
+CONNECT_TIME 120
+IDLE_TIME 3
+SESSIONS_PER_USER 2
+FAILED_LOGIN_ATTEMPTS 1
+PASSWORD_LOCK_TIME 5/1440;
+
+\******************NOTION DE CPU_PER_SESSION
+CPU_PER_SESSION:temps de cpu par session
+CPU_PER_CALL:tmp de cpu par requette
+
+
+
+
+pour cree un user et lui affecter un profil
+
+CREATE USER TP3 
+IDENTIFIED BY test
+DEFAULT tablespace USERS 
+QUOTA 10M on USERS
+TEMPORARY tablespace TEMP
+PROFILE profil_tp3;
+
+afficher le profile d'un user
+SELECT profile from DBA_USERS where
+username='TP3';
+
+
+
+afficher les users qui on ete cree aujourd'hui (pour cette session)
+Select username from dba_users 
+where to_char(created,'dd/mm/yyyy')= 
+to_char(sysdate,'dd/mm/yyyy');
+
+
+procedure qui affiche les profil distinctement
+CREATE OR REPLACE PROCEDURE PROC_LISTE_PROFIL
+IS
+BEGIN
+for i in (select distinct profile A from 
+dba_profiles )
+LOOP
+dbms_output.put_line(i.A);
+END LOOP;
+END;
+
+
+
+function de verification de password
+CREATE OR REPLACE Function verif_password(p_username varchar2, 
+p_password varchar2, old_password varchar2) RETURN boolean 
+IS
+c integer:=0;
+x integer:=0;
+BEGIN
+if p_username=p_password then 
+raise_application_error(-20001,'Le nom de l''utilisateur et le mot de passe doivent être différents');
+end if;
+if length(p_password) <=6 then
+raise_application_error(-20004, 'La longueur du mot de passe doit être supérieure à 6 caractères');
+end if;
+for i in 1..length(p_password) loop
+if substr(p_password,i,1) in ('?','!','@') then c:=c+1;
+end if;
+end loop;
+
+if c=0 then raise_application_error(-20001,'Le mot de passe doit contenir au moins l''un des caractères suivants : ? ! @ ');
+end if;
+
+--ajouter cette condition : mdp doit contenir une lettre majuscule
+
+for j in 1..length(p_password) loop
+if Ascii(substr(p_password,j,1))  between Ascii('A') and Ascii('Z')
+then x:=x+1;
+end if;
+end loop;
+
+if x=0 then raise_application_error(-20001,'Le mot de passe doit contenir au moins une lettre majuscule ');
+end if;
+
+return true;
+end;
+/
+
+
+NB NE PAS OUBLIER DE L'AFFECTER AU PROFIL
+ALTER PROFILE profil_tp3 Limit password_verify_function verif_password  ;
+
+supprimer un profil et verifier si il a bien ete supprimer
+Drop PROFILE profil_tp3 ; ??//Drop PROFILE profil_tp3 cascade;
+select profile from dba_users where username='TP3'; --- Default
+
+
+----------------------audit et role tp4 et 5---------------
+
+cree un role et lui affecter quelque privilege
+create role role_tp3 ;
+grant create session, create table, create role to role_tp3;
+grant create procedure to role_tp3 with admin option;
+grant select on hr.employees to role_tp3;
+grant select on hr.departments to role_tp3;
+
+
+donner un role a un user
+grant role_tp3 to nomduUser;
+
+
+donner les privilege select et insert sur un objet pour un user
+Grant select, insert on TP3.etudiants to TP3_2;
+
+
+cree une procedure qui affiche les privilege d un user 
+Create or replace procedure proc_privs (utilisateur varchar2)
+is 
+begin
+for i in (  select privilege from dba_sys_privs where grantee=utilisateur)
+loop
+dbms_output.put_line(i.privilege );
+end loop;
+end;
+/
+
+
+afficher les parameter de audit_trail
+show parameter audit_trail
+
+
+modilier la config de audit_trail
+Alter system set audit_trail=db,extended 
+scope=spfile;
+--shutdown 
+--startup
+Option de autdit trail:DB,EXTENDED,XML_ETENDED,
+XML:stocker les donnes
+
+
+audit ldd sur les table du user td4
+audit table by td4 by access (ou by session);
+
+audit lmd sur les table du user td4
+audit insert table, update table, delete table
+by td4 by access;
+
+nombre de connection faite par le user td4
+select count(*) from dba_audit_session
+where username='TD4';
+
+
+audit sur la modification des structur des objets
+audit alter on default;
+
+
+supprimer un audit
+NOAUDIT select, delete on td41.table1;
+
+
+syntaxe trigger
+CREATE [OR REPLACE] TRIGGER nom trigger
+{BEFORE|AFTER|INSTEAD OF}
+{INSERT|UPDATE [ OF nom colonne [, nom colonneN]] |DELETE}
+OR {INSERT|UPDATE [OF nom colonne [, nom colonneN ]] |DELETE}
+REFERENCING {[OLD [AS] ancien] | [NEW [AS] nouveau]}
+ON nom table
+[FOR EACH ROW]
+[WHEN] (condition)
+DECLARE
+/* d´eclaration */
+BEGIN
+/* traitement */
+[EXCEPTION]
+END ;
+
+
+--------------------------------IMPORT \ EXPORT tp6-------------------
+
+pour import \ export
+
+les etapes :
+
+tout d abord on cree un dossier datapump physiquement
+
+puis on le cree logiquement avec la commande :
+
+CREATE OR REPLACE DIRECTORY nomDossier As 
+'C:\exportation'; (créer le path avant)
+
+
+on donne l'acces read write
+GRANT read, write ON directory nomDossier
+TO user1, user2;
+
+
+commande export
+EXPDP user1/pwd directory=nomDossier dumpfile=nomFichierDeSortie.dump LOGfile=nomFichier.log
+
+import metadta de user1 vers user2
+IMPDP user2/pwd2 content=metadata_only directory=nomDossier dumpfile=user1.dump tables=user1.test1 remap_schema=user1:user2
+
+
+import table test2 vers user 2
+IMPDP user2/pwd2 directory=nomDossier dumpfile=user1.dump tables=user1.test2 
+remap_schema=user1:user2
+
+
+
+--------partie sql loader
+
+--contenu du fichier artiste.ctl :
+/*
+load data infile 'c:\...\artiste.txt'
+badfile 'c:\...\artisteB.bad'
+discardfile 'c:\...\artisteD.dsc'
+Insert into table artiste
+when (1:1) ="0"
+fields terminated by ','
+(
+identifiant,
+nom,
+prenom,
+pays
+) 
+
+------
+sqlldr user/pwd control=nomficher.ctl log=nomfichier.log data=nomfichier.dat
+
+
+
+
+
+
+
+
+
+

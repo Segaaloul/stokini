@@ -1,0 +1,36 @@
+git branch
+
+
+# Ajouter tous les changements
+git add .
+
+# Faire un commit avec un message clair
+git commit -m "Ajout de la page de profil utilisateur"
+
+# Pousser sur GitHub
+git push
+
+
+
+git pull origin Prod
+git pull origin Dev
+
+
+git add public/.htaccess
+git commit -m "Ajout du fichier .htaccess"
+git push
+
+
+git switch Dev
+
+
+
+
+
+
+drwxrwxr-x  6 www-data www-data   4096 Jul 25 11:30 uploads/
+
+sudo chown -R www-data:www-data uploads
+sudo chown -R stokini:stokini uploads
+
+
