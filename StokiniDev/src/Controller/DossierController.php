@@ -22,6 +22,9 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
+use App\Message\OptimizeImageMessage;
+use Symfony\Component\Messenger\MessageBusInterface;
+
 #[Route('/dossier')] // 👈 prefix ici
 class DossierController extends AbstractController
 {
@@ -33,6 +36,21 @@ class DossierController extends AbstractController
 
         ]);
     }
+
+    # route utiliser pour affciher les images dans afficher.html.twig ligne 81
+    #[Route('/image/{path}', name: 'app_serve_image', requirements: ['path' => '.+'])]
+    public function serveImage(string $path): Response
+    {
+        $basePath = $this->getParameter('uploads_optimized_directory'); // Version optimisée
+        $fullPath = $basePath . '/' . $path;
+
+        if (!file_exists($fullPath) || !is_readable($fullPath)) {
+            throw $this->createNotFoundException('Image introuvable');
+        }
+
+        return new BinaryFileResponse($fullPath); // Pas de Content-Disposition => affichage inline
+    }
+
 
     #[Route('/fichier/{path}', name: 'app_serve_fichier', requirements: ['path' => '.+'])]
     public function serveFichier(string $path, Security $security): BinaryFileResponse
@@ -85,6 +103,7 @@ class DossierController extends AbstractController
     }
 
 
+    #fonction pour creer un dossier
     #[Route('/dossier/create', name: 'app_dossier_create', methods: ['POST'])]
     public function create(Request $request, EntityManagerInterface $em, Security $security): Response
     {
@@ -103,14 +122,19 @@ class DossierController extends AbstractController
         $nom = $request->request->get('nom');
         $dossier->setNom($nom);
         $dossier->setCreateAt(new \DateTimeImmutable());
-        $dossier->setCreatedBy($user->getNom());
+        $dossier->setCreatedBy($user->getId());
         $em->persist($dossier);
         $em->flush();
         // $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/'  . $user->getNom() . '/' . $dossier->getNom();
-        $uploadDir = $this->getParameter('uploads_directory') . '/' . $user->getNom() . '/' . $dossier->getNom();
+        $uploadDir = $this->getParameter('uploads_directory') . '/' . $user->getId() . '/' . $dossier->getNom();
+        $optimizedDir = $this->getParameter('uploads_optimized_directory') . '/' . $user->getId() . '/' . $dossier->getNom();
 
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0775, true); // crée le dossier récursivement
+        }
+
+        if (!file_exists($optimizedDir)) {
+            mkdir($optimizedDir, 0775, true); // crée le dossier récursivement dans le dossier optimized
         }
 
         return $this->redirectToRoute('app_fichiers');
@@ -140,78 +164,83 @@ class DossierController extends AbstractController
         return $this->redirectToRoute('app_fichiers');
     }
 
-    public function liste(EntityManagerInterface $em, Security $security): Response
-    {
-        $user = $security->getUser();
 
-        if (!$user instanceof User) {
-            throw $this->createAccessDeniedException('Vous devez être connecté pour voir cette page.');
-        }
+    # aparemnt ne sert a rien
+    // public function liste(EntityManagerInterface $em, Security $security): Response
+    // {
+    //     $user = $security->getUser();
 
-        if (!$user instanceof User) {
-            return $this->redirectToRoute('app_login'); // ou AccessDenied
-        }
-        // Récupérer les dossiers liés à l'utilisateur connecté
-        $dossiers = $em->getRepository(Dossier::class)->createQueryBuilder('d')
-            ->join('d.users', 'u')
-            ->where('u = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getResult();
+    //     if (!$user instanceof User) {
+    //         throw $this->createAccessDeniedException('Vous devez être connecté pour voir cette page.');
+    //     }
 
-        // Récupérer fichiers sans dossier
-        $fichiersSansDossier = $em->getRepository(Fichier::class)->findBy(['dossier' => null]);
+    //     if (!$user instanceof User) {
+    //         return $this->redirectToRoute('app_login'); // ou AccessDenied
+    //     }
+    //     // Récupérer les dossiers liés à l'utilisateur connecté
+    //     $dossiers = $em->getRepository(Dossier::class)->createQueryBuilder('d')
+    //         ->join('d.users', 'u')
+    //         ->where('u = :user')
+    //         ->setParameter('user', $user)
+    //         ->getQuery()
+    //         ->getResult();
 
-        // Récupérer tous les utilisateurs sauf l'utilisateur connecté
-        $allUsers = $em->getRepository(User::class)->createQueryBuilder('u')
-            ->where('u != :currentUser')
-            ->setParameter('currentUser', $user)
-            ->getQuery()
-            ->getResult();
+    //     // Récupérer fichiers sans dossier
+    //     $fichiersSansDossier = $em->getRepository(Fichier::class)->findBy(['dossier' => null]);
 
-        return $this->render('fichier/liste.html.twig', [
-            'dossiers' => $dossiers,
-            'fichiersSansDossier' => $fichiersSansDossier,
-            'all_users' => $allUsers,
-        ]);
-    }
+    //     // Récupérer tous les utilisateurs sauf l'utilisateur connecté
+    //     $allUsers = $em->getRepository(User::class)->createQueryBuilder('u')
+    //         ->where('u != :currentUser')
+    //         ->setParameter('currentUser', $user)
+    //         ->getQuery()
+    //         ->getResult();
 
+    //     return $this->render('fichier/liste.html.twig', [
+    //         'dossiers' => $dossiers,
+    //         'fichiersSansDossier' => $fichiersSansDossier,
+    //         'all_users' => $allUsers,
+    //     ]);
+    // }
+
+
+    #cette route est utilisee pour afficher le contenu d'un fichier dans afficher.html.twig ligne 95 et egalement pour le telechargement
     #[Route('/fichier/{path}', name: 'app_serve_file', requirements: ['path' => '.+'])]
     public function serveFile(string $path, Security $security, EntityManagerInterface $em): Response
     {
-        // Vérifie que l'utilisateur est connecté
         $user = $security->getUser();
 
         if (!$user instanceof User) {
-            throw $this->createAccessDeniedException("Vous devez être connecté pour créer un dossier.");
+            throw $this->createAccessDeniedException("Vous devez être connecté.");
         }
 
-        // Reconstruire le chemin absolu
-        $basePath = $this->getParameter('kernel.project_dir') . '/uploads';
+
+        //$basePath = $this->getParameter('uploads_directory');
+        $basePath = 'uploads';
+
         $fullPath = $basePath . '/' . $path;
 
-        // Vérifie que le fichier existe
         if (!file_exists($fullPath) || !is_readable($fullPath)) {
             throw $this->createNotFoundException('Fichier introuvable');
         }
 
-        // Vérifie que le fichier appartient bien à l'utilisateur connecté
-        // (en fonction de ton système, ici tu dois retrouver l'entité Fichier)
         $fichier = $em->getRepository(Fichier::class)->findOneBy(['chemin' => $path]);
 
         if (!$fichier) {
             throw $this->createNotFoundException('Fichier non trouvé en base');
         }
 
-        // Vérifie que l'utilisateur a le droit d'y accéder (ex : appartient à lui)
         if ($fichier->getUtilisateur() !== $user) {
             throw $this->createAccessDeniedException('Accès refusé à ce fichier');
         }
 
-        // OK, renvoyer le fichier
-        return new BinaryFileResponse($fullPath);
-    }
+        $response = new BinaryFileResponse($fullPath);
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            basename($fullPath)
+        );
 
+        return $response;
+    }
 
 
     // public function afficher(Dossier $dossier): Response
@@ -223,17 +252,22 @@ class DossierController extends AbstractController
     //     ]);
     // }
     // }
+
+    #permet d afficher les fichier d un dossier et assure egalement l UPLOAD de fichier
     #[Route('/dossier/{id}', name: 'app_dossier_afficher')]
-    public function afficher(int $id, Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
-    {
+    public function afficher(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        SluggerInterface $slugger,
+        MessageBusInterface $bus
+    ): Response {
         $dossier = $em->getRepository(Dossier::class)->find($id);
+
         if (!$dossier) {
             throw $this->createNotFoundException('Dossier non trouvé.');
         }
 
-
-
-        // Crée formulaire upload
         $form = $this->createForm(FichierType::class);
         $form->handleRequest($request);
 
@@ -244,11 +278,21 @@ class DossierController extends AbstractController
                 foreach ($files as $file) {
                     $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
                     $safeFilename = $slugger->slug($originalFilename);
-                    // $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
                     $extension = $file->guessExtension() ?? pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
                     $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
 
+                    // Upload dans /uploads/{dossierId}/
+                    $targetDir = $this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom();
+                    if (!is_dir($targetDir)) {
+                        mkdir($targetDir, 0777, true);
+                    }
+
                     $file->move($this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom(),  $newFilename);
+
+
+
+                    // Dispatch message d'optimisation
+                    $bus->dispatch(new OptimizeImageMessage($dossier->getId(), $newFilename));
 
                     $fichier = new Fichier();
                     $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $newFilename);
@@ -271,7 +315,53 @@ class DossierController extends AbstractController
         ]);
     }
 
+    //  #[Route('/dossier/{id}', name: 'app_dossier_afficher')]
+    //     public function afficher(int $id, Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    //     {
+    //         $dossier = $em->getRepository(Dossier::class)->find($id);
+    //         if (!$dossier) {
+    //             throw $this->createNotFoundException('Dossier non trouvé.');
+    //         }
 
+
+
+    //         // Crée formulaire upload
+    //         $form = $this->createForm(FichierType::class);
+    //         $form->handleRequest($request);
+
+    //         if ($form->isSubmitted() && $form->isValid()) {
+    //             $files = $form->get('fichier')->getData();
+
+    //             if ($files) {
+    //                 foreach ($files as $file) {
+    //                     $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+    //                     $safeFilename = $slugger->slug($originalFilename);
+    //                     // $newFilename = $safeFilename . '-' . uniqid() . '.' . $file->guessExtension();
+    //                     $extension = $file->guessExtension() ?? pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+    //                     $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
+
+    //                     $file->move($this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom(),  $newFilename);
+
+    //                     $fichier = new Fichier();
+    //                     $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $newFilename);
+    //                     $fichier->setNom($originalFilename);
+    //                     $fichier->setUploadedAt(new \DateTimeImmutable());
+    //                     $fichier->setDossier($dossier);
+
+    //                     $em->persist($fichier);
+    //                 }
+    //                 $em->flush();
+    //             }
+
+    //             return $this->redirectToRoute('app_dossier_afficher', ['id' => $id]);
+    //         }
+
+    //         return $this->render('dossier/afficher.html.twig', [
+    //             'dossier' => $dossier,
+    //             'fichiers' => $dossier->getFichiers(),
+    //             'form' => $form->createView(),
+    //         ]);
+    //     }
 
 
 
@@ -294,14 +384,35 @@ class DossierController extends AbstractController
 
             $filesystem = new Filesystem();
             $cheminFichier = $this->getParameter('uploads_directory') . '/' . $fichier->getChemin();
-
             if ($filesystem->exists($cheminFichier)) {
                 $filesystem->remove($cheminFichier);
             }
 
+            $filesystem = new Filesystem();
+            $cheminFichier = $this->getParameter('uploads_optimized_directory') . '/' . $fichier->getChemin();
+            if ($filesystem->exists($cheminFichier)) {
+                $filesystem->remove($cheminFichier);
+            }
+
+
+
+
             $em->remove($fichier);
             $em->flush();
         }
+
+        $cheminDossier = $this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom();
+        $filesystem = new Filesystem();
+        if ($filesystem->exists($cheminDossier)) {
+            $filesystem->remove($cheminDossier);
+        }
+
+        $cheminDossier = $this->getParameter('uploads_optimized_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom();
+        $filesystem = new Filesystem();
+        if ($filesystem->exists($cheminDossier)) {
+            $filesystem->remove($cheminDossier);
+        }
+
 
         $em->remove($dossier);
         $em->flush();
@@ -364,8 +475,8 @@ class DossierController extends AbstractController
         $nombrededossiers = count($listedossiers);
 
         foreach ($users as $user) {
-            $userNom = $user->getNom();
-            $userFolder = $basePath . '/' . $userNom;
+            $userId = $user->getId();
+            $userFolder = $basePath . '/' . $userId;
             // if (!is_dir($userFolder)) {
             //     continue; // on saute cet utilisateur
             // }
@@ -385,5 +496,65 @@ class DossierController extends AbstractController
             'nombredefichiers' => $nombredefichiers,
             'nombrededossiers' => $nombrededossiers
         ]);
+    }
+
+
+
+
+    #route pour acceder aux parametres d'un dossier
+    #[Route('/param/{id}', name: 'app_dossier_parametres')]
+    public function parametresDossier(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+
+        if (!$dossier) {
+            throw $this->createNotFoundException('Dossier non rencontré');
+        }
+
+        $listusers = $dossier->getUsers();
+        $user_creator = $em->getRepository(User::class)->find($dossier->getCreatedBy());
+        $nomber_of_files = count($dossier->getFichiers());
+
+
+
+        return $this->render('dossier/dossier_param.html.twig', [
+            'dossier' => $dossier,
+            'users' => $listusers,
+            'user_creator' => $user_creator,
+            'nomber_of_files' => $nomber_of_files
+        ]);
+    }
+
+
+
+
+    #[Route('/dossier/removeUser/{id}', name: 'app_dossier_removeUser', methods: ['POST'])]
+    public function removeUserfromDossier(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+
+        if (!$dossier) {
+            throw $this->createNotFoundException('Dossier non trouvé.');
+        }
+
+        $userId = $request->request->get('userId');
+
+        if (!$userId) {
+            return $this->redirectToRoute('app_dossier_parametres', ['id' => $id]);
+        }
+
+        $user = $em->getRepository(User::class)->find($userId);
+
+        if (!$user) {
+            throw $this->createNotFoundException('Utilisateur non trouvé.');
+        }
+
+        // Retirer l’utilisateur du dossier (ManyToMany)
+        $dossier->removeUser($user);
+
+        $em->persist($dossier);
+        $em->flush();
+
+        return $this->redirectToRoute('app_dossier_parametres', ['id' => $id]);
     }
 }

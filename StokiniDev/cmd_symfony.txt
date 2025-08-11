@@ -15,6 +15,16 @@ symfony server:stop
 php bin/console cache:clear
 
 
+php bin/console make:controller  # Crée un nouveau contrôleur
+php bin/console make:entity      # Crée une entité Doctrine
+php bin/console make:migration   # Crée une migration vide
+php bin/console make:form        # Crée une classe de formulaire
+php bin/console make:user        # Crée une entité User avec système de sécurité
+php bin/console make:auth        # Crée un système de login
+php bin/console make:crud        # Génère un CRUD complet pour une entité
 
 
+pour le worker en fond: 
+
+php bin/console messenger:consume async -vv (il est alancer en arriere plan en systemd)
 

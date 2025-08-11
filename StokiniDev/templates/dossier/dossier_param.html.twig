@@ -1,0 +1,152 @@
+{% extends 'base.html.twig' %} 
+
+ {%  block content %}
+
+ <div class="container-xxl flex-grow-1 container-p-y">
+
+    <div class="row">
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-80">
+                            <img class="card-img-top" src="{{ asset('assets/img/icons/foldergreen_93329.png') }}" alt="Card image cap">
+                            {# <div class="card-body">
+                            <h5 class="card-title">{{dossier.nom}}</h5>
+                            
+                            <a href="javascript:void(0)" class="btn btn-outline-primary">Go somewhere</a>
+                            </div> #}
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-8 mb-3">
+                        <div class="card ">
+                                <h2 class="accordion-header" id="headingOne">
+                                    <button type="button" class="accordion-button" data-bs-toggle="collapse" data-bs-target="#accordionOne" aria-expanded="true" aria-controls="accordionOne">
+                                    Settings
+                                    </button>
+                                </h2>
+
+                                <div id="accordionOne" class="accordion-collapse collapse show" data-bs-parent="#accordionExample" style="">
+                                    <div class="accordion-body">
+                                    Here you can find detailed information about your folder, including its properties and associated users. You can also manage various settings related to this folder, such as sharing permissions, user access, and other configuration options to help you organize and control your data effectively.
+                                    </div>
+                                </div>
+
+
+                            
+                            
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="">
+                                    <div class="list-group">
+                                        <a href="javascript:void(0);" class="list-group-item list-group-item-action list-group-item-success" >  Info</a>
+                                        <a href="javascript:void(0);" class="list-group-item list-group-item-action">Name : <span style="font-weight: bold">  {{dossier.nom}}</span></a>
+                                        <a href="javascript:void(0);" class="list-group-item list-group-item-action ">Date of creation : <span style="font-weight: bold"> {{dossier.createAt | date('Y-m-d')}}</span></a>
+                                        <a href="javascript:void(0);" class="list-group-item list-group-item-action">Creator : <span style="font-weight: bold">{{user_creator.nom}}</span></a>
+                                        <a href="javascript:void(0);" class="list-group-item list-group-item-action">Number of files :<span style="font-weight: bold"> {{nomber_of_files}}</span></a>
+                                    </div>
+                            </div>
+                        </div>
+                </div>
+
+
+               
+
+
+
+
+
+
+
+                
+
+     </div>
+
+<div class="card" >
+  <h5 class="card-header">Liste des utilisateurs</h5>
+  <div class="table-responsive text-nowrap" >
+    <table class="table" >
+      <thead class="table-light">
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Email</th>
+          
+          
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody class="table-border-bottom-0" >
+        {% for user in users %}
+        {# lmodele de confirmation de suppression dun user du dossier #}
+<div class="modal fade" id="confirmRemoveModal{{ user.id }}" tabindex="-1" aria-labelledby="confirmRemoveLabel{{ user.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{{ path('app_dossier_removeUser', {'id': dossier.id}) }}">
+        <input type="hidden" name="userId" value="{{ user.id }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="confirmRemoveLabel{{ user.id }}">Confirm Removal</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to remove this user from the folder?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-danger">Remove</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+          <tr>
+            <td><i class="bx bx-user me-2 text-primary"></i> <strong>{{ user.id }}</strong></td>
+                        <td>{{ user.nom }}</td>
+
+            <td>{{ user.email }}</td>
+            
+           <td>
+                       {% if dossier.createdBy == app.user.id %}
+
+                          <div class="dropdown">
+                            <button type="button" class="btn p-0 dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                              <i class="bx bx-dots-vertical-rounded"></i>
+                            </button>
+                            <div class="dropdown-menu">
+                              {# <a class="dropdown-item" href="javascript:void(0);"><i class="bx bx-edit-alt me-1"></i> Edit</a> #}
+                                <form method="post" action="{{ path('app_dossier_removeUser', {'id': dossier.id}) }}" onsubmit="return confirm('Supprimer cet utilisateur ?');" style="display: inline;">
+                                    <input type="hidden" name="userId" value="{{ user.id }}">
+                                   <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#confirmRemoveModal{{ user.id }}">
+                                     <i class="bx bx-trash me-1"></i> Remove
+                                    </button>
+
+                                </form>
+                            </div>
+                          </div>
+                          {% endif %}
+             </td>
+            
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" class="text-center">Aucun utilisateur trouvé.</td>
+          </tr>
+
+          
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+ {% endblock %}

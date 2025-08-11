@@ -87,47 +87,63 @@
 
 
 
-  <!-- --------partie dossier-------- -->
+  <!-- --------    partie dossier.   -------- -->
 
   {% for dossier in dossiers %}
       {% set dateUploadd = dossier.createAt ? dossier.createAt|date('Y-m-d') : '' %}
 
-  <div class="col fichier-card" data-date="{{ dateUploadd }}" >
-    <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}" class="text-decoration-none text-dark">
-      <div class="card h-100 shadow-sm p-2">
+ <div class="col fichier-card" data-date="{{ dateUploadd }}">
+    <div class="card h-100 shadow-sm p-2 position-relative">
 
-      {% if dossier.users|length > 1 %}
-         {% set autres_users = dossier.users|filter(u => u.id != app.user.id) %}
-         {% set noms_users = autres_users|map(u => u.email)|join(', ') %}
+        {# Bouton menu 3 points #}
+        <div class="dropdown position-absolute top-0 start-0 m-2">
+            <button class="btn btn-light btn-sm p-1 rounded-circle" style="font-size: 22px; line-height: 1 ;font-weight: bold"  type="button" id="dropdownMenu{{ dossier.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                &#x22EE; {# trois points verticaux #}
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenu{{ dossier.id }}">
+                <li>
+                     <a class="dropdown-item" href="{{ path('app_dossier_parametres', { id: dossier.id }) }}">
+                        ⚙️ Settings
+                    </a> 
+                </li>
+                {% if dossier.createdBy == app.user.id %}
+                <li>
+                    <a class="dropdown-item text-danger" href="{{ path('app_dossier_supprimer', { id: dossier.id }) }}" onclick="return confirm('Supprimer ce dossier ?')">
+                        🗑 Delete
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
 
+        {# Badge partage si +1 user #}
+        {% if dossier.users|length > 1 %}
+            {% set autres_users = dossier.users|filter(u => u.id != app.user.id) %}
+            {% set noms_users = autres_users|map(u => u.email)|join(', ') %}
             <span class="badge bg-primary position-absolute top-0 end-0 m-2" title="Partagé avec : {{ noms_users }}"> P </span>
-      {% endif %}
+        {% endif %}
 
-        <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/foldergreen_93329.png') }}" alt="Dossier" style="max-height: 200px; object-fit: contain;">
-        <div class="card-body p-2">
-            <h6 class="card-title small text-truncate" title="{{ dossier.nom }}">{{ dossier.nom }}</h6>
-            <p class="card-text small text-muted mb-1">📅 {{ dateUploadd ? dateUploadd|date('d/m/Y') : 'Inconnu' }}</p>
-
-        </div>
-    </a>
-        <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
-        <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}">
-          <span class="btn btn-sm btn-outline-primary ">Ouvrir</span>
+        {# Image dossier #}
+        <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}" class="text-decoration-none text-dark">
+            <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/foldergreen_93329.png') }}" alt="Dossier" style="max-height: 200px; object-fit: contain;">
+            <div class="card-body p-2">
+                <h6 class="card-title small text-truncate" title="{{ dossier.nom }}">{{ dossier.nom }}</h6>
+                <p class="card-text small text-muted mb-1">📅 {{ dateUploadd ? dateUploadd|date('d/m/Y') : 'Inconnu' }}</p>
+            </div>
         </a>
-          {% if dossier.createdBy == app.user.nom %}
 
-            <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#partagerModal{{ dossier.id }}">Partager</button>
-
-            <form method="post" action="{{ path('app_dossier_supprimer', { id: dossier.id }) }}" onsubmit="return confirm('Supprimer ce dossier ?');">
-              <button type="submit" class="btn btn-sm btn-outline-danger">🗑</button>
-            </form>
-{% endif %}
-
+        {# Footer #}
+        <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
+            <a href="{{ path('app_dossier_afficher', { id: dossier.id }) }}">
+                <span class="btn btn-sm btn-outline-primary">Open</span>
+            </a>
+            {% if dossier.createdBy == app.user.id %}
+                <button class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#partagerModal{{ dossier.id }}">Share</button>
+            {% endif %}
         </div>
-      </div>
-    
-    
-  </div>
+    </div>
+</div>
+
 
 
 

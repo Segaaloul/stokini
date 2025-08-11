@@ -4,7 +4,9 @@
 
  {%  block content %}
 
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.css">
+<script src="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.js"></script>
 
  <div class="container-xxl flex-grow-1 container-p-y">
  
@@ -23,9 +25,9 @@
  </button>
 
 
-<button class="btn btn-danger" id="deleteSelectedBtn" disabled>Supprimer la sélection <span id="selectedCount" class="badge badge-center rounded-pill bg-primary">0</span>
-</button>
+<button class="btn btn-danger" id="deleteSelectedBtn" disabled>Supprimer la sélection <span id="selectedCount" class="badge badge-center rounded-pill bg-primary">0</span></button> 
    
+
   </div>
  
 </div>
@@ -78,7 +80,7 @@
        
   <input type="checkbox" class="form-check-input file-checkbox position-absolute" style="top: 8px; left: 8px; border-radius: 50%; hover:width: 2px;cursor: pointer; border: 2px solid #40E00B;" value="{{ fichier.id }}">
         {% if isImage %}
-          <img class="card-img-top img-fluid" src="{{ path('app_serve_fichier', {'path': fichier.chemin}) }}" alt="{{ fichier.nom }}" style="max-height: 150px; object-fit: cover;">
+<img class="card-img-top img-fluid" src="{{ path('app_serve_image', {'path': fichier.chemin}) }}" alt="{{ fichier.nom }}" style="max-height: 150px; object-fit: cover;">
         {% else %}
           {# Ici on met une icône générique pour les fichiers non images #}
           <img class="card-img-top img-fluid" src="{{ asset('assets/img/icons/fichiertxt.png') }}" alt="Fichier" style="max-height: 150px; object-fit: contain;">
@@ -90,12 +92,12 @@
         <div class="card-footer bg-white border-top-0 d-flex justify-content-between p-2">
         {# <a class="btn btn-sm btn-outline-primary" href="{{ path('app_serve_file', {'path': fichier.chemin}) }}"  target="_blank">Voir</a> #}
         <a  href="{{ path('app_fichier_dupliquer', {'path': fichier.chemin, 'id': dossier.id}) }}">
-<img src="{{ asset('assets/img/icons/copy.png') }}" alt="Dupliquer" style="max-height: 18px; object-fit: contain;  filter: invert(66%) sepia(62%) saturate(5397%) hue-rotate(5deg) brightness(97%) contrast(101%);">
-</a>
-<a class="btn btn-sm btn-outline-primary" href="javascript:void(0);" onclick="openOverlay('{{ path('app_serve_file', {'path': fichier.chemin}) }}')">Voir</a>
+           <img src="{{ asset('assets/img/icons/copy.png') }}" alt="Dupliquer" style="max-height: 18px; object-fit: contain;  filter: invert(66%) sepia(62%) saturate(5397%) hue-rotate(5deg) brightness(97%) contrast(101%);">
+        </a>
+        <a class="btn btn-sm btn-outline-primary" href="javascript:void(0);" onclick="openOverlay('{{ path('app_serve_file', {'path': fichier.chemin}) }}')">Voir</a>
 
 
-<a class="btn btn-sm btn-outline-success" href="{{ path('app_serve_file', {'path': fichier.chemin}) }}"  download="{{ fichier.nom }}">Télécharger</a>
+<a class="btn btn-sm btn-outline-success" href="{{ path('app_serve_file', {'path': fichier.chemin}) }}" download="{{ fichier.nom }}">Télécharger</a>
 {% if isFile %}
 <a class="btn btn-sm btn-outline-primary" href="{{ path('app_editeur_fichier', {id: fichier.id}) }}">
     ✏️ 
@@ -111,6 +113,9 @@
         </div>
       </div>
     </div>
+
+
+
     <!-- Modale de confirmation de suppresion -->
 <div class="modal fade" id="confirmDeleteModal{{ fichier.id }}" tabindex="-1" aria-labelledby="confirmDeleteModalLabel{{ fichier.id }}" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -136,10 +141,36 @@
     </div>
   </div>
 </div>
+
+
+
+{# modele de suppresion pouir la selection de plusieur fichiers #}
+<div class="modal fade" id="confirmDeleteSelectedModal" tabindex="-1" aria-labelledby="confirmDeleteSelectedLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteSelectedLabel">Confirmer la suppression</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+      </div>
+      <div class="modal-body">
+        Êtes-vous sûr de vouloir supprimer <span id="modalSelectedCount"></span> fichier(s) ?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Supprimer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
 {% else %}
     <div class="col">
       <div class="alert alert-warning w-100">Aucun fichier trouvé.</div>
     </div>
+
     
 {% endfor %}
 
@@ -163,7 +194,7 @@
 <script src="{{ asset('assets/vendor/libs/popper/popper.js') }}"></script>
 
 
-<script>
+{# <script>
   function openOverlay(fileUrl) {
     const overlay = document.getElementById('fileOverlay');
     const viewer = document.getElementById('fileViewer');
@@ -177,8 +208,8 @@
     viewer.src = '';
     overlay.style.display = 'none';
   }
-</script>
-<script>
+</script> #}
+{# <script>
   // Définir une constante pour l'ID du dossier (protégé contre le HTML injection)
   const DOSSIER_ID = {{ dossier.id|json_encode|raw }};
 
@@ -209,7 +240,7 @@
 
       if (selectedIds.length === 0) return;
 
-      if (!confirm(`Supprimer ${selectedIds.length} fichier(s) ?`)) return;
+       //if (!confirm(`Supprimer ${selectedIds.length} fichier(s) ?`)) return; 
 
       fetch('{{ path('app_fichiers_supprimer_selection') }}', {
         method: 'POST',
@@ -236,11 +267,250 @@
       });
     });
   });
-</script>
+</script> #}
+{# 
+<script>
+function openOverlay(fileUrl) {
+  const overlay = document.getElementById('fileOverlay');
+  const viewer = document.getElementById('fileViewer');
+  viewer.src = fileUrl;
+  overlay.style.display = 'block';
+}
+
+function closeOverlay() {
+  const overlay = document.getElementById('fileOverlay');
+  const viewer = document.getElementById('fileViewer');
+  viewer.src = '';
+  overlay.style.display = 'none';
+}
+
+// Définir une constante pour l'ID du dossier (protégé contre le HTML injection)
+const DOSSIER_ID = {{ dossier.id|json_encode|raw }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const checkboxes = document.querySelectorAll('.file-checkbox');
+  const deleteBtn = document.getElementById('deleteSelectedBtn');
+  const countBadge = document.getElementById('selectedCount');
+
+  // Met à jour le badge et active/désactive le bouton de suppression
+  function updateSelectionState() {
+    const selected = Array.from(checkboxes).filter(cb => cb.checked);
+    const selectedCount = selected.length;
+
+    countBadge.textContent = selectedCount;
+    deleteBtn.disabled = selectedCount === 0;
+  }
+
+  // Ajouter un écouteur à chaque case à cocher
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectionState);
+  });
+
+  // Gérer la suppression lors du clic
+  deleteBtn.addEventListener('click', () => {
+    const selectedIds = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    if (selectedIds.length === 0) return;
+
+    // Afficher le popup SweetAlert2
+    Swal.fire({
+      title: 'Confirmer la suppression',
+      text: `Voulez-vous vraiment supprimer ${selectedIds.length} fichier(s) ?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Oui, supprimer',
+      cancelButtonText: 'Annuler'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch('{{ path('app_fichiers_supprimer_selection') }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '{{ csrf_token('supprimer_fichiers') }}'
+          },
+          body: JSON.stringify({
+            dossierId: DOSSIER_ID,
+            ids: selectedIds
+          })
+        })
+        .then(response => {
+          if (response.ok) {
+            Swal.fire(
+              'Supprimé !',
+              'Les fichiers ont été supprimés avec succès.',
+              'success'
+            ).then(() => {
+              location.reload();
+            });
+          } else {
+            Swal.fire(
+              'Erreur',
+              'Une erreur est survenue lors de la suppression.',
+              'error'
+            );
+          }
+        })
+        .catch(error => {
+          console.error("Erreur réseau :", error);
+          Swal.fire(
+            'Erreur',
+            'Une erreur réseau est survenue.',
+            'error'
+          );
+        });
+      }
+    });
+  });
+});
+
+
+</script> #}
+
 
 <script>
+function openOverlay(fileUrl) {
+  const overlay = document.getElementById('fileOverlay');
+  const viewer = document.getElementById('fileViewer');
+  viewer.src = fileUrl;
+  overlay.style.display = 'block';
+}
 
+function closeOverlay() {
+  const overlay = document.getElementById('fileOverlay');
+  const viewer = document.getElementById('fileViewer');
+  viewer.src = '';
+  overlay.style.display = 'none';
+}
 
+// Définir une constante pour l'ID du dossier (protégé contre le HTML injection)
+const DOSSIER_ID = {{ dossier.id|json_encode|raw }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const checkboxes = document.querySelectorAll('.file-checkbox');
+  const deleteBtn = document.getElementById('deleteSelectedBtn');
+  const countBadge = document.getElementById('selectedCount');
+
+  // Met à jour le badge et active/désactive le bouton de suppression
+  function updateSelectionState() {
+    const selected = Array.from(checkboxes).filter(cb => cb.checked);
+    const selectedCount = selected.length;
+
+    countBadge.textContent = selectedCount;
+    deleteBtn.disabled = selectedCount === 0;
+  }
+
+  // Ajouter un écouteur à chaque case à cocher
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectionState);
+  });
+
+  // Gérer la suppression lors du clic
+  deleteBtn.addEventListener('click', () => {
+    const selectedIds = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.value);
+
+    if (selectedIds.length === 0) return;
+
+    // Afficher le popup SweetAlert2 avec un slider
+    Swal.fire({
+      title: 'Confirmer la suppression',
+      html: `
+        <p>Voulez-vous vraiment supprimer ${selectedIds.length} fichier(s) ?</p>
+        <p>Faites glisser pour confirmer :</p>
+        <div id="slider-confirm" style="width: 80%; margin: 20px auto;"></div>
+        <p id="slider-status" style="text-align: center; color: #888;">Glissez vers la droite pour confirmer</p>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Confirmer',
+      cancelButtonText: 'Annuler',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      didOpen: () => {
+        // Initialiser le slider noUiSlider
+        const slider = document.getElementById('slider-confirm');
+        const sliderStatus = document.getElementById('slider-status');
+        const confirmButton = Swal.getConfirmButton();
+
+        // Désactiver le bouton de confirmation par défaut
+        confirmButton.disabled = true;
+
+        noUiSlider.create(slider, {
+          start: 0,
+          range: {
+            'min': 0,
+            'max': 100
+          },
+          step: 1
+        });
+
+        // Écouter les changements du slider
+        slider.noUiSlider.on('update', (values, handle) => {
+          const value = parseFloat(values[handle]);
+          if (value >= 100) {
+            sliderStatus.textContent = 'Confirmation prête !';
+            sliderStatus.style.color = '#28a745';
+            confirmButton.disabled = false;
+          } else {
+            sliderStatus.textContent = 'Glissez vers la droite pour confirmer';
+            sliderStatus.style.color = '#888';
+            confirmButton.disabled = true;
+          }
+        });
+      },
+      preConfirm: () => {
+        const slider = document.getElementById('slider-confirm');
+        return slider.noUiSlider.get() >= 100; // Vérifie que le slider est à 100%
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        fetch('{{ path('app_fichiers_supprimer_selection') }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '{{ csrf_token('supprimer_fichiers') }}'
+          },
+          body: JSON.stringify({
+            dossierId: DOSSIER_ID,
+            ids: selectedIds
+          })
+        })
+        .then(response => {
+          if (response.ok) {
+            Swal.fire(
+              'Supprimé !',
+              'Les fichiers ont été supprimés avec succès.',
+              'success'
+            ).then(() => {
+              location.reload();
+            });
+          } else {
+            Swal.fire(
+              'Erreur',
+              'Une erreur est survenue lors de la suppression.',
+              'error'
+            );
+          }
+        })
+        .catch(error => {
+          console.error("Erreur réseau :", error);
+          Swal.fire(
+            'Erreur',
+            'Une erreur réseau est survenue.',
+            'error'
+          );
+        });
+      }
+    });
+  });
+});
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}

@@ -103,7 +103,8 @@ class FichierController extends AbstractController
         return $this->render('fichier/liste.html.twig', [
             'dossiers' => $dossiers,
             'fichiersSansDossier' => $fichiersSansDossier,
-            'all_users' => $allUsers,
+            'all_users' => $allUsers
+
 
 
         ]);

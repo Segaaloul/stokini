@@ -45,10 +45,12 @@ class RegistrationController extends AbstractController
                 )
             );
             $user->setRoles(['ROLE_USER']);
-            $user->setIsActive(0);
+            $user->setIsActive(1);
             $entityManager->persist($user);
             $entityManager->flush();
-            $uploadDir = $this->getParameter('uploads_directory') . '/' . $user->getNom();
+            $uploadDir = $this->getParameter('uploads_directory') . '/' . $user->getId();
+            $optimizedDir = $this->getParameter('uploads_optimized_directory') . '/' . $user->getId();
+
 
             if (!file_exists($uploadDir)) {
                 //mkdir($uploadDir, 0775, true); // crée le dossier récursivement
@@ -56,6 +58,14 @@ class RegistrationController extends AbstractController
                     throw new \RuntimeException(sprintf('Impossible de créer le dossier : %s', $uploadDir));
                 }
             }
+
+            if (!file_exists($optimizedDir)) {
+                //mkdir($optimizedDir, 0775, true); // crée le dossier récursivement
+                if (!mkdir($optimizedDir, 0775, true) && !is_dir($optimizedDir)) {
+                    throw new \RuntimeException(sprintf('Impossible de cree le dossier : %s', $optimizedDir));
+                }
+            }
+
 
             // Connecte automatiquement l'utilisateur (optionnel)
             // $this->container->get('security.login_manager')->logInUser($user);
