@@ -63,12 +63,12 @@ class OptimizeImageHandler implements MessageHandlerInterface
             }
         }
 
-        // Redimensionner si trop large
+        // Redimensionner si trop large  au debut jai mis 1920
         $size = $image->getSize();
-        if ($size->getWidth() > 1920) {
-            $image->resize(new Box(1920, intval(1920 * $size->getHeight() / $size->getWidth())));
+        if ($size->getWidth() > 1280) {
+            $image->resize(new Box(1280, intval(1280 * $size->getHeight() / $size->getWidth())));
         }
 
-        $image->save($optimizedPath, ['jpeg_quality' => 85]);
+        $image->save($optimizedPath, ['jpeg_quality' => 75]);
     }
 }

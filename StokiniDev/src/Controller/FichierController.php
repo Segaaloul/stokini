@@ -21,6 +21,8 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use App\Repository\DossierRepository;
 use App\Repository\FichierRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use App\Message\OptimizeImageMessage;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[Route('/fichier')] // 👈 prefix ici
 class FichierController extends AbstractController
@@ -139,7 +141,7 @@ class FichierController extends AbstractController
 
 
     #[Route('/fichier/dupliquer/{{path}/{id}', name: 'app_fichier_dupliquer', requirements: ['path' => '.+'])]
-    public function dupliquerFichier(string $path, EntityManagerInterface $em, int $id): Response
+    public function dupliquerFichier(string $path, EntityManagerInterface $em, int $id, MessageBusInterface $bus): Response
     {
         $basePath = $this->getParameter('uploads_directory') . '/';
         $originalPath = $basePath . '/' . $path;
@@ -158,8 +160,11 @@ class FichierController extends AbstractController
         if (!copy($originalPath, $newPath)) {
             throw new \Exception('Erreur lors de la duplication du fichier.');
         }
+        
 
         $dossier = $em->getRepository(Dossier::class)->find($id);
+        // Dispatch message d'optimisation
+        $bus->dispatch(new OptimizeImageMessage($dossier->getId(), $newName));
         // Enregistrement BDD
         $nouveauFichier = new Fichier();
         $nouveauFichier->setNom('Copie de ' . basename($path));

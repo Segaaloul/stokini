@@ -88,31 +88,62 @@
 
 
 
-  
-<div class="col-md-6 col-lg-4 col-xl-4 order-0 mb-4">
-                  <div class="card h-100">
-                    <div class="card-header d-flex align-items-center justify-content-between pb-0">
-                      <div class="card-title mb-0">
-                        <h5 class="m-0 me-2">Statistics Storage</h5>
-                        <small class="text-muted"> Total : <span class="fw-bold">{{tailleMainFolder}} </span>  </small>
-                      </div>
-                      <div class="dropdown">
-                        <button class="btn p-0" type="button" id="orederStatistics" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                          <i class="bx bx-dots-vertical-rounded"></i>
-                        </button>
-                        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="orederStatistics">
-                          <a class="dropdown-item" href="javascript:void(0);">Select All</a>
-                          <a class="dropdown-item" href="javascript:void(0);">Refresh</a>
-                          <a class="dropdown-item" href="javascript:void(0);">Share</a>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div class="card-body">
-                    
-                                   <canvas id="storageDonut" width="656" height="656" style="display: block; box-sizing: border-box; height: 328px; width: 328px;"></canvas>
 
-                    </div>
+
+<div class="row">
+  <!-- Premier donut -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between pb-0">
+        <div class="card-title mb-0">
+          <h5 class="m-0 me-2">Statistics Storage Stokini</h5>
+          <small class="text-muted"> Total : <span class="fw-bold">{{ tailleMainFolder }}</span> </small>
+        </div>
+        <div class="dropdown">
+          <button class="btn p-0" type="button" id="orderStatistics1" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bx bx-dots-vertical-rounded"></i>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="orderStatistics1">
+            <a class="dropdown-item" href="javascript:void(0);">Select All</a>
+            <a class="dropdown-item" href="javascript:void(0);">Refresh</a>
+            <a class="dropdown-item" href="javascript:void(0);">Share</a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="storageDonut" width="200" height="200" style="display: block; box-sizing: border-box;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deuxième donut -->
+  <div class="col-md-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between pb-0">
+        <div class="card-title mb-0">
+          <h5 class="m-0 me-2">Statistics Storage Server</h5>
+          <small class="text-muted">Total : <span class="fw-bold">{{ totalSpaceGB }} Go</span></small>
+        </div>
+        <div class="dropdown">
+          <button class="btn p-0" type="button" id="orderStatistics2" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="bx bx-dots-vertical-rounded"></i>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end" aria-labelledby="orderStatistics2">
+            <a class="dropdown-item" href="javascript:void(0);">Select All</a>
+            <a class="dropdown-item" href="javascript:void(0);">Refresh</a>
+            <a class="dropdown-item" href="javascript:void(0);">Share</a>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <canvas id="storageDonutserver" width="200" height="200" style="display: block; box-sizing: border-box;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
                   </div>
                 </div>
 {% set noms = [] %}
@@ -154,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           position: 'right'
@@ -170,6 +202,96 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="col-md-6 col-lg-4 col-xl-4 order-0 mb-4">
+  <div class="card h-100">
+    
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  const ctx2 = document.getElementById('storageDonutserver').getContext('2d');
+
+ const total = {{ totalSpaceGB|default(0) | json_encode | raw }};
+const used = {{ usedSpaceGB|default(0) | json_encode | raw }};
+const available = {{ freeSpaceGB|default(0) | json_encode | raw }};
+
+
+  const data = {
+    labels: [
+      `Used (${used} Go)`,
+      `Available (${available} Go)`
+    ],
+    datasets: [{
+      data: [used, available],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.7)',   // rouge pour utilisé
+        'rgba(75, 192, 192, 0.7)'    // vert pour disponible
+      ],
+      hoverOffset: 30
+    }]
+  };
+
+  const config2 = {
+    type: 'doughnut',
+    data: data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return context.label;
+            }
+          }
+        },
+        title: {
+          display: true,
+          text: `Total Storage: ${total} Go`
+        }
+      }
+    },
+  };
+
+  new Chart(ctx2, config2);
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

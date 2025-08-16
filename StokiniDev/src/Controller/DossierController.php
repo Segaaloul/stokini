@@ -134,8 +134,10 @@ class DossierController extends AbstractController
         }
 
         if (!file_exists($optimizedDir)) {
-            mkdir($optimizedDir, 0775, true); // crée le dossier récursivement dans le dossier optimized
-        }
+    mkdir($optimizedDir, 0775, true);
+    chgrp($optimizedDir, 'www-data');
+    chmod($optimizedDir, 0775);
+}
 
         return $this->redirectToRoute('app_fichiers');
     }
@@ -490,11 +492,26 @@ class DossierController extends AbstractController
         $taille = $this->getFolderSize($basePath);
         $tailleMainFolder = $this->formatSize($taille);
 
+
+        $freeSpaceBytes = disk_free_space('/');
+        $freeSpaceGB = round($freeSpaceBytes / 1024 / 1024 / 1024, 2); // 2 décimales
+
+        
+        $totalSpaceBytes = disk_total_space('/');
+        $usedSpaceGB = round(($totalSpaceBytes - $freeSpaceBytes) / 1024 / 1024 / 1024, 2);
+        $totalSpaceGB = round($totalSpaceBytes / 1024 / 1024 / 1024, 2);
+
+        
+
         return $this->render('admin/stats_stockage.html.twig', [
             'stockages' => $data,
             'tailleMainFolder' => $tailleMainFolder,
             'nombredefichiers' => $nombredefichiers,
-            'nombrededossiers' => $nombrededossiers
+            'nombrededossiers' => $nombrededossiers,
+            'totalSpaceGB' => $totalSpaceGB,
+            'usedSpaceGB' => $usedSpaceGB,
+            'freeSpaceGB' => $freeSpaceGB
+
         ]);
     }
 
