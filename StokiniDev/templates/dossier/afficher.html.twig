@@ -4,6 +4,25 @@
 
  {%  block content %}
 
+ <style>
+.audio-player audio::-webkit-media-controls-panel {
+    background-color: #e9ecef; /* fond clair */
+    border-radius: 5px;
+    height: 35px;
+}
+
+.audio-player audio::-webkit-media-controls-play-button,
+.audio-player audio::-webkit-media-controls-volume-slider {
+    filter: invert(35%) sepia(5%) saturate(500%) hue-rotate(200deg);
+}
+
+.audio-wrapper:hover {
+    border-color: #40E00B; /* vert */
+}
+
+
+ </style>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.css">
 <script src="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.js"></script>
@@ -19,16 +38,19 @@
   </div>
 
   <!-- Boutons -->
-  <div class="d-flex gap-2 mt-2 mt-md-4">
+  {# <div class="d-flex gap-2 mt-2 mt-md-4">
     <button type="button" class="btn btn-success " data-bs-toggle="modal" data-bs-target="#uploadModal">
   Ajouter fichier(s)
- </button>
+ </button> #}
 
+<div class="d-flex gap-2 mt-2 mt-md-4 flex-wrap">
+    <button id="showDrop" type="button" class="btn btn-success btn-sm btn-md">Ajouter fichier(s)</button>
+    <button class="btn btn-danger btn-sm btn-md" id="deleteSelectedBtn" disabled>
+        Supprimer sélection 
+        <span id="selectedCount" class="badge badge-center rounded-pill bg-primary">0</span>
+    </button>
+</div>
 
-<button class="btn btn-danger" id="deleteSelectedBtn" disabled>Supprimer la sélection <span id="selectedCount" class="badge badge-center rounded-pill bg-primary">0</span></button> 
-   
-
-  </div>
  
 </div>
 
@@ -38,7 +60,38 @@
 
 <div class="row row-cols-1 row-cols-md-4 g-3 mb-5" id="fichier-grid">
 
+ {# <div id="drop" style="display:none; border:2px dashed #bbb; padding:30px; text-align:center; margin-top:20px;">
+        Déposez vos fichiers ici ou cliquez pour sélectionner.
+    </div>
+    <div id="list" style="margin-top:20px;"></div> #}
 
+
+
+{# Modal Bootstrap Pour upload de gros fichier avec Resumable.js #}
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content rounded-3 shadow-lg">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" style="color: white;">Uploader fichier</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="drop" 
+             style="border:2px dashed #bbb; border-radius:10px; padding:40px; text-align:center; cursor:pointer;">
+          📂 Déposez vos fichiers ici ou cliquez pour sélectionner.
+        </div>
+
+        <div id="list" class="mt-4"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    
 <!-- La fenêtre modale Bootstrap  pour ajouter fichier-->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -70,6 +123,8 @@
  {% for fichier in fichiers %}
     {% set ext = fichier.chemin|split('.')|last|lower %}
     {% set isImage = ext in ['jpg', 'jpeg', 'png', 'gif', 'webp'] %}
+    {% set isVideo = ext in ['mp4', 'webm', 'ogg', 'mov', 'avi'] %}
+    {% set isAudio = ext in ['mp3', 'wav', 'ogg'] %}
     {% set dateUpload = fichier.uploadedAt ? fichier.uploadedAt|date('Y-m-d') : '' %}
         {% set isFile = ext in ['docx', 'rtf', 'pdf', 'txt'] %}
 
@@ -79,11 +134,30 @@
        <!-- Checkbox de sélection  jai retirer p-2 en haut  <div class="card h-100 shadow-sm p-2">-->
        
   <input type="checkbox" class="form-check-input file-checkbox position-absolute" style="top: 8px; left: 8px; border-radius: 50%; hover:width: 2px;cursor: pointer; border: 2px solid #40E00B;" value="{{ fichier.id }}">
-        {% if isImage %}
-<img class="card-img-top img-fluid" src="{{ path('app_serve_image', {'path': fichier.chemin}) }}" alt="{{ fichier.nom }}" style="max-height: 200px; object-fit: cover;">
+          {% if isImage %}
+              <img class="card-img-top img-fluid" src="{{ path('app_serve_image', {'path': fichier.chemin}) }}" alt="{{ fichier.nom }}" style="max-height: 200px; object-fit: cover;">
+          {% elseif isVideo %}
+                      {% set mimeType = 
+                  ext == 'mov' ? 'video/quicktime' :
+                  ext == 'mp4' ? 'video/mp4' :
+                  ext == 'webm' ? 'video/webm' :
+                  ext == 'ogg' ? 'video/ogg' :
+                  'application/octet-stream'  %}
+              <video class="card-img-top" controls style="max-height:200px; object-fit:cover;">
+                  <source src="{{ path('app_serve_file', {'path': fichier.chemin}) }}" type="{{ mimeType }}">
+                  Ton navigateur ne supporte pas la vidéo.
+              </video>
+          {% elseif isAudio %}
+              <img class="card-img-top img-fluid p-4" src="{{ asset('assets/img/icons/musicLogo.png') }}" alt="Fichier" style="max-height: 280px; object-fit: contain;">
+              <audio class="w-100" controls style="outline:none; vertical-align: middle; padding: 10px  ">
+                <source src="{{ path('app_serve_file', {'path': fichier.chemin}) }}" type="audio/{{ ext }}">
+                Votre navigateur ne supporte pas la lecture audio.
+              </audio>
+  
         {% else %}
-          {# Ici on met une icône générique pour les fichiers non images #}
-          <img class="card-img-top img-fluid p-4" src="{{ asset('assets/img/icons/fichiertxt.png') }}" alt="Fichier" style="max-height: 170px; object-fit: contain;">
+        
+            {# Ici on met une icône générique pour les fichiers non images #}
+            <img class="card-img-top img-fluid p-4" src="{{ asset('assets/img/icons/fichiertxt.png') }}" alt="Fichier" style="max-height: 200px; object-fit: contain;">
         {% endif %}
         <div class="card-body d-flex justify-content-between p-2">
           <h7 class="card-title small text-truncate" title="{{ fichier.nom }}">{{ fichier.nom }}</h7>
@@ -97,12 +171,12 @@
         <a class="btn btn-sm btn-outline-primary" href="javascript:void(0);" onclick="openOverlay('{{ path('app_serve_file', {'path': fichier.chemin}) }}')">Voir</a>
 
 
-<a class="btn btn-sm btn-outline-success" href="{{ path('app_serve_file', {'path': fichier.chemin}) }}" download="{{ fichier.nom }}">Télécharger</a>
-{% if isFile %}
-<a class="btn btn-sm btn-outline-primary" href="{{ path('app_editeur_fichier', {id: fichier.id}) }}">
-    ✏️ 
-</a>
-{% endif %}
+        <a class="btn btn-sm btn-outline-success" href="{{ path('app_serve_file', {'path': fichier.chemin}) }}" download="{{ fichier.nom }}">Télécharger</a>
+        {% if isFile %}
+            <a class="btn btn-sm btn-outline-primary" href="{{ path('app_editeur_fichier', {id: fichier.id}) }}">
+                ✏️ 
+            </a>
+        {% endif %}
 
 
           <!-- Bouton déclencheur -->
@@ -537,4 +611,92 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+
+
+{# ---------------- partie avec Bibliothèque Resumable.js ------------ #}
+
+
+
+
+<script src="https://unpkg.com/resumablejs@1.1.0/resumable.js"></script>
+<script>
+{# document.getElementById('showDrop').addEventListener('click', function() {
+    document.getElementById('drop').style.display = 'block';
+}); #}
+
+document.getElementById('showDrop').addEventListener('click', function() {
+    var modal = new bootstrap.Modal(document.getElementById('uploadModal'));
+    modal.show();
+});
+
+var r = new Resumable({
+    target: "{{ path('app_dossier_afficher', {'id': dossier.id}) }}",
+    query: {},
+    chunkSize: 2*1024*1024, // 2MB
+     fileParameterName: 'file', // très important !!
+    simultaneousUploads: 1,
+    testChunks: true,
+    throttleProgressCallbacks: 1,
+});
+
+
+r.assignDrop(document.getElementById('drop'));
+r.assignBrowse(document.getElementById('drop'));
+
+r.on('fileAdded', function(file) {
+    var list = document.getElementById('list');
+    var item = document.createElement('div');
+    item.id = 'file-' + file.uniqueIdentifier;
+
+    item.innerHTML = `
+        <strong>${file.fileName}</strong>
+        <div style="background:#eee; height:20px; width:100%; margin-top:5px; border-radius:4px; overflow:hidden;">
+            <div class="progress" 
+                 style="background:linear-gradient(90deg, #28a745, #218838); 
+                        width:0%; 
+                        height:100%; 
+                        transition: width 0.5s ease;">
+            </div>
+        </div>
+    `;
+
+    list.appendChild(item);
+    r.upload();
+});
+
+r.on('fileProgress', function(file){
+    var progress = Math.floor(file.progress() * 100) + '%';
+    var bar = document.querySelector('#file-' + file.uniqueIdentifier + ' .progress');
+    if (bar) bar.style.width = progress;
+});
+
+
+
+r.on('fileSuccess', function(file, message){
+    var list = document.getElementById('list');
+    var item = document.createElement('div');
+    item.innerText = "Upload terminé: " + file.fileName;
+    list.appendChild(item);
+
+    // Vérifier si tous les fichiers sont terminés
+    if (r.files.every(f => f.isComplete())) {
+        setTimeout(() => {
+            location.reload(); // Rafraîchit la page
+        }, 3000); // petit délai pour laisser afficher "✔️ Terminé"
+    }
+});
+
+
+</script>
+
+
+
+
+
+
+
+
+
 {% endblock %}

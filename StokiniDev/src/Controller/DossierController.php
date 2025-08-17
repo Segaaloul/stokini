@@ -134,10 +134,10 @@ class DossierController extends AbstractController
         }
 
         if (!file_exists($optimizedDir)) {
-    mkdir($optimizedDir, 0775, true);
-    chgrp($optimizedDir, 'www-data');
-    chmod($optimizedDir, 0775);
-}
+            mkdir($optimizedDir, 0775, true);
+            // chgrp($optimizedDir, 'www-data');  a decommenter si sur linux
+            chmod($optimizedDir, 0775);
+        }
 
         return $this->redirectToRoute('app_fichiers');
     }
@@ -235,11 +235,34 @@ class DossierController extends AbstractController
             throw $this->createAccessDeniedException('Accès refusé à ce fichier');
         }
 
+        // config avant version 1.5
+        // $response = new BinaryFileResponse($fullPath);
+        // $response->setContentDisposition(
+        //     ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+        //     basename($fullPath)
+        // );
+
+
+
+        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $mime = match ($ext) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'ogg' => 'video/ogg',
+            'mov' => 'video/quicktime',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            default => 'application/octet-stream',
+        };
+
         $response = new BinaryFileResponse($fullPath);
-        $response->setContentDisposition(
-            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
-            basename($fullPath)
-        );
+        $response->headers->set('Content-Type', $mime);
+        $response->headers->set('Accept-Ranges', 'bytes'); // essentiel pour le streaming vidéo
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, basename($fullPath));
 
         return $response;
     }
@@ -256,8 +279,8 @@ class DossierController extends AbstractController
     // }
 
     #permet d afficher les fichier d un dossier et assure egalement l UPLOAD de fichier
-    #[Route('/dossier/{id}', name: 'app_dossier_afficher')]
-    public function afficher(
+    #[Route('/dossier2/{id}', name: 'app_dossier_afficher2')]
+    public function afficher1(
         int $id,
         Request $request,
         EntityManagerInterface $em,
@@ -496,12 +519,12 @@ class DossierController extends AbstractController
         $freeSpaceBytes = disk_free_space('/');
         $freeSpaceGB = round($freeSpaceBytes / 1024 / 1024 / 1024, 2); // 2 décimales
 
-        
+
         $totalSpaceBytes = disk_total_space('/');
         $usedSpaceGB = round(($totalSpaceBytes - $freeSpaceBytes) / 1024 / 1024 / 1024, 2);
         $totalSpaceGB = round($totalSpaceBytes / 1024 / 1024 / 1024, 2);
 
-        
+
 
         return $this->render('admin/stats_stockage.html.twig', [
             'stockages' => $data,
@@ -573,5 +596,181 @@ class DossierController extends AbstractController
         $em->flush();
 
         return $this->redirectToRoute('app_dossier_parametres', ['id' => $id]);
+    }
+
+
+
+
+    // ici commence la version 1.5
+
+
+
+    #[Route('/dossier/{id}', name: 'app_dossier_afficher', methods: ['GET', 'POST'])]
+    public function afficher(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        SluggerInterface $slugger,
+        MessageBusInterface $bus
+    ): Response {
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+        if (!$dossier) {
+            throw $this->createNotFoundException('Dossier non trouvé.');
+        }
+
+        $uploadDir = $this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom();
+
+        // ======== Gestion Resumable.js ========
+        $chunkNumber = (int) $request->get('resumableChunkNumber', 0);
+        if ($chunkNumber > 0) {
+            $totalChunks = (int) $request->get('resumableTotalChunks', 1);
+            $identifier  = preg_replace('/[^0-9A-Za-z_-]/', '', (string) $request->get('resumableIdentifier', ''));
+            $filename    = basename((string) $request->get('resumableFilename', 'file'));
+
+
+            if (!$identifier || !$filename || $chunkNumber < 1) {
+                return new Response('Bad Request', 400);
+            }
+
+            $tmpDir = rtrim($uploadDir, '/') . '/chunks/' . $identifier;
+            if (!is_dir($tmpDir) && !mkdir($tmpDir, 0775, true) && !is_dir($tmpDir)) {
+                return new Response('Cannot create temp directory', 500);
+            }
+
+            $chunkPath = $tmpDir . '/chunk' . $chunkNumber;
+            if ($request->isMethod('GET')) {
+                return file_exists($chunkPath) ? new Response('', 200) : new Response('', 204);
+            }
+
+            $file = $request->files->get('file');
+            if (!$file) {
+                return new Response('No chunk uploaded', 400);
+            }
+
+            if ($request->isMethod('GET')) {
+                return file_exists($chunkPath) ? new Response('', 200) : new Response('', 204);
+            }
+
+            $file->move($tmpDir, 'chunk' . $chunkNumber);
+
+            if ($this->allChunksPresent($tmpDir, $totalChunks)) {
+                $finalDir = rtrim($uploadDir);
+                if (!is_dir($finalDir) && !mkdir($finalDir, 0775, true) && !is_dir($finalDir)) {
+                    return new Response('Cannot create final directory', 500);
+                }
+
+                $extension = pathinfo($filename, PATHINFO_EXTENSION);
+                $safeBase  = preg_replace('/[^0-9A-Za-z._-]/', '_', pathinfo($filename, PATHINFO_FILENAME));
+                $finalName = $this->uniqueName($finalDir, $safeBase, $extension);
+                $finalPath = $finalDir . '/' . $finalName;
+
+                $out = fopen($finalPath, 'ab');
+                for ($i = 1; $i <= $totalChunks; $i++) {
+                    $in = fopen($tmpDir . '/chunk' . $i, 'rb');
+                    stream_copy_to_stream($in, $out);
+                    fclose($in);
+                }
+                fclose($out);
+                
+                // --- Ici, ajouter la conversion FFmpeg ---
+                $ext = strtolower(pathinfo($finalPath, PATHINFO_EXTENSION));
+                if (in_array($ext, ['mov', 'avi', 'webm', 'ogg']) && $ext !== 'mp4') {
+                    $convertedName = pathinfo($finalName, PATHINFO_FILENAME) . '.mp4';
+                    $convertedPath = $finalDir . '/' . $convertedName;
+
+                    $cmd = sprintf(
+                        'ffmpeg -i %s -c:v libx264 -c:a aac -strict experimental %s',
+                        escapeshellarg($finalPath),
+                        escapeshellarg($convertedPath)
+                    );
+                    exec($cmd);
+
+                    unlink($finalPath);
+
+                    $finalName = $convertedName;
+                    $finalPath = $convertedPath;
+                }
+
+                array_map('unlink', glob($tmpDir . '/chunk*') ?: []);
+                @rmdir($tmpDir);
+
+                // Persistance base de données
+                $fichier = new Fichier();
+                $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $finalName);
+                $fichier->setNom($filename);
+                $fichier->setUploadedAt(new \DateTimeImmutable());
+                $fichier->setDossier($dossier);
+                $em->persist($fichier);
+                $em->flush();
+
+                // Dispatch optimisation
+                $bus->dispatch(new OptimizeImageMessage($dossier->getId(), $finalName));
+
+                return new Response(json_encode(['filename' => $finalName]), 201, ['Content-Type' => 'application/json']);
+            }
+
+            return new Response('', 200);
+        }
+
+        // ======== Formulaire classique ========
+        $form = $this->createForm(FichierType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $files = $form->get('fichier')->getData();
+            if ($files) {
+                foreach ($files as $file) {
+                    $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = $slugger->slug($originalFilename);
+                    $extension = $file->guessExtension() ?? pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
+
+                    $targetDir = rtrim($uploadDir);
+                    if (!is_dir($targetDir)) {
+                        mkdir($targetDir, 0777, true);
+                    }
+
+                    $file->move($targetDir, $newFilename);
+                    $bus->dispatch(new OptimizeImageMessage($dossier->getId(), $newFilename));
+
+                    $fichier = new Fichier();
+                    $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $newFilename);
+                    $fichier->setNom($originalFilename);
+                    $fichier->setUploadedAt(new \DateTimeImmutable());
+                    $fichier->setDossier($dossier);
+                    $em->persist($fichier);
+                }
+                $em->flush();
+            }
+
+            return $this->redirectToRoute('app_dossier_afficher', ['id' => $id]);
+        }
+
+        return $this->render('dossier/afficher.html.twig', [
+            'dossier' => $dossier,
+            'fichiers' => $dossier->getFichiers(),
+            'form' => $form->createView(),
+        ]);
+    }
+
+
+    private function allChunksPresent(string $dir, int $total): bool
+    {
+        for ($i = 1; $i <= $total; $i++) {
+            if (!file_exists($dir . '/chunk' . $i)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function uniqueName(string $dir, string $base, string $ext): string
+    {
+        $i = 0;
+        do {
+            $name = $base . ($i ? '_' . $i : '') . ($ext ? '.' . $ext : '');
+            $i++;
+        } while (file_exists($dir . '/' . $name));
+        return $name;
     }
 }

@@ -13,7 +13,93 @@ hhhhhhhhh
 jai cree un groupe media
 
 
+pour la convertion des videos en mp4 il fau : brew install ffmpeg sur mac 
+                                            sudo apt install ffmpeg sur linux
+
 
 
 
 sudo systemctl status messenger-consumer.service
+
+
+
+
+ #[Route('/dossier/{id}', name: 'app_dossier_afficher')]
+    public function afficher(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        SluggerInterface $slugger,
+        MessageBusInterface $bus
+    ): Response {
+        $dossier = $em->getRepository(Dossier::class)->find($id);
+
+        if (!$dossier) {
+            throw $this->createNotFoundException('Dossier non trouvé.');
+        }
+
+        $form = $this->createForm(FichierType::class);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $files = $form->get('fichier')->getData();
+
+            if ($files) {
+                foreach ($files as $file) {
+                    $originalFilename = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = $slugger->slug($originalFilename);
+                    $extension = $file->guessExtension() ?? pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
+                    $newFilename = $safeFilename . '-' . uniqid() . '.' . $extension;
+
+                    // Upload dans /uploads/{dossierId}/
+                    $targetDir = $this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom();
+                    if (!is_dir($targetDir)) {
+                        mkdir($targetDir, 0777, true);
+                    }
+
+                    $file->move($this->getParameter('uploads_directory') . '/' . $dossier->getCreatedBy() . '/' . $dossier->getNom(),  $newFilename);
+
+
+
+                    // Dispatch message d'optimisation
+                    $bus->dispatch(new OptimizeImageMessage($dossier->getId(), $newFilename));
+
+                    $fichier = new Fichier();
+                    $fichier->setChemin($dossier->getCreatedBy() . '/' . $dossier->getNom() . '/' . $newFilename);
+                    $fichier->setNom($originalFilename);
+                    $fichier->setUploadedAt(new \DateTimeImmutable());
+                    $fichier->setDossier($dossier);
+
+                    $em->persist($fichier);
+                }
+                $em->flush();
+            }
+
+            return $this->redirectToRoute('app_dossier_afficher', ['id' => $id]);
+        }
+
+        return $this->render('dossier/afficher.html.twig', [
+            'dossier' => $dossier,
+            'fichiers' => $dossier->getFichiers(),
+            'form' => $form->createView(),
+        ]);
+    }
+
+
+
+
+
+p
+
+
+
+
+
+
+
+
+
+
+
+
+
